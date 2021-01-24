@@ -1,7 +1,6 @@
 ﻿using Catalog.API.Data.Interfaces;
 using Catalog.API.Entities;
 using Catalog.API.Repositories.Interfaces;
-using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -21,43 +20,47 @@ namespace Catalog.API.Repositories
         {
             List<Product> res = new List<Product>();
 
-            
-
-            using (var reader = await _context.CommandExecutor("select Name , Category,  Summary , Description , Price from Products"))
+            using (var reader = await _context.CommandExecutor("select Id, Name , Category,  Summary , Description , Price from Products"))
             {
                 while (reader.Read())
                 {
                     res.Add(new Product()
                     {
-                        Name = reader.GetString(0),
-                        Category = reader.GetString(1),
-                        Summary = reader.GetString(2),
-                        Description = reader.GetString(3),
-                        Price = reader.GetInt32(4)
+                        Id = reader.GetInt32(0),
+                        Name = reader.GetString(1),
+                        Category = reader.GetString(2),
+                        Summary = reader.GetString(3),
+                        Description = reader.GetString(4),
+                        Price = reader.GetInt32(5)
                     });
 
                 }
             }
 
             return  res;
-
-            /*
-        return await _context
-                        .Products
-                        .Find(p => true)
-                        .ToListAsync();
-            */
         }
 
         public async Task<Product> GetProduct(string id)
         {
-            throw new NotImplementedException();
-            /*
-            return await _context
-                            .Products
-                            .Find(p => p.Id == id)
-                            .FirstOrDefaultAsync();
-            */
+            Product res = null;
+
+            using (var reader = await _context.CommandExecutor($"select Name , Category,  Summary , Description , Price from Products where id={id}"))
+            {
+                while (reader.Read())
+                {
+                    res= new Product()
+                    {
+                        Name = reader.GetString(0),
+                        Category = reader.GetString(1),
+                        Summary = reader.GetString(2),
+                        Description = reader.GetString(3),
+                        Price = reader.GetInt32(4)
+                    };
+
+                }
+            }
+
+            return res;
         }
 
         public async Task<IEnumerable<Product>> GetProductByName(string name)

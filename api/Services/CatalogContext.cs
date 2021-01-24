@@ -2,48 +2,62 @@
 using Catalog.API.Entities;
 using Catalog.API.Settings;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Data;
 using System.Threading.Tasks;
 
 namespace Catalog.API.Data
 {
-    public class CatalogContext : ICatalogContext
+    public class CatalogContext : ICatalogContext, IDisposable
     {
-        public CatalogContext(ICatalogDatabaseSettings settings)
+        private readonly ILogger<CatalogContext> _logger;
+
+        public CatalogContext(ICatalogDatabaseSettings settings, ILogger<CatalogContext> logger)
         {
-            connection = new   SqliteConnection(settings.ConnectionString);
-            connection.Open();
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-            cmd = new SqliteCommand("", connection);
+            Connection = new   SqliteConnection(settings.ConnectionString);
+            Connection.Open();
 
-            CatalogContextSeed.SeedData(cmd);
+            _logger.LogInformation("connection.Open", null);
+
+            Cmd = new SqliteCommand("", Connection);
+
+            // Enable write-ahead logging
+            Cmd.CommandText =   @"PRAGMA journal_mode = 'wal'";
+            Cmd.ExecuteNonQuery();
+
+            CatalogContextSeed.SeedData(Cmd);
         }
 
         public void Dispose()
         {
-            if (connection != null && connection.State == System.Data.ConnectionState.Open) connection.Close();
+            _logger.LogInformation("connection.Close", null);
+
+            if (Connection != null && Connection.State == System.Data.ConnectionState.Open) Connection.Close();
         }
 
         public async Task<SqliteDataReader> CommandExecutor(string SQL)
         {
-            cmd.CommandText = SQL;
-            return await cmd.ExecuteReaderAsync();
+            Cmd.CommandText = SQL;  
+            return await Cmd.ExecuteReaderAsync();
         }
         public async Task<object> CommandExecutorScalar(string SQL)
         {
-            cmd.CommandText = SQL;
-            return await cmd.ExecuteScalarAsync();
+            Cmd.CommandText = SQL;
+            return await Cmd.ExecuteScalarAsync();
         }
         public async Task CommandExecutorNonQuery(string SQL)
         {
-            cmd.CommandText = SQL;
-            await cmd.ExecuteNonQueryAsync();
+            Cmd.CommandText = SQL;
+            await Cmd.ExecuteNonQueryAsync();
         }
 
 
 
-        public SqliteCommand cmd { get; }
-        public SqliteConnection connection { get; }
+        public SqliteCommand Cmd { get; }
+        public SqliteConnection Connection { get; }
 
     }
 }

@@ -44,8 +44,8 @@ namespace Catalog.API
 
             #region Project Dependencies
 
-            services.AddTransient<ICatalogContext, CatalogContext>();
-            services.AddTransient<IProductRepository, ProductRepository>();
+            services.AddScoped<IProductRepository, ProductRepository>();
+            services.AddScoped<ICatalogContext, CatalogContext>();
 
             #endregion
 

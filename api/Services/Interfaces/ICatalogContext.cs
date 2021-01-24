@@ -6,8 +6,8 @@ namespace Catalog.API.Data.Interfaces
 {
     public interface ICatalogContext
     {
-        SqliteCommand cmd { get; }
-        SqliteConnection connection { get; }
+        SqliteCommand Cmd { get; }
+        SqliteConnection Connection { get; }
         public Task<SqliteDataReader> CommandExecutor(string SQL);
         public Task<object> CommandExecutorScalar(string SQL);
         public Task CommandExecutorNonQuery(string SQL);
