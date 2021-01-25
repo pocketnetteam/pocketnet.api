@@ -6,13 +6,13 @@ namespace Catalog.API.Repositories.Interfaces
 {
     public interface IProductRepository
     {
-        Task<IEnumerable<Product>> GetProducts();
-        Task<Product> GetProduct(string id);
-        Task<IEnumerable<Product>> GetProductByName(string name);
-        Task<IEnumerable<Product>> GetProductByCategory(string categoryName);
+        Task<IEnumerable<Product>> GetProductsAsync();
+        Task<IEnumerable<Getlastcomments>> GetlastcommentsAsync(string address, string lang);
+        Task<IEnumerable<Product>> GetProductByNameAsync(string name);
+        Task<IEnumerable<Product>> GetProductByCategoryAsync(string categoryName);
                       
-        Task Create(Product product);
-        Task<bool> Update(Product product);
-        Task<bool> Delete(string id);
+        //Task CreateAsync(Product product);
+        //Task<bool> UpdateAsync(Product product);
+        //Task<bool> DeleteAsync(string id);
     }
 }
