@@ -36,11 +36,11 @@ namespace Catalog.API.Controllers
         [HttpGet("{address:length(34)}", Name = "Getlastcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Getlastcomments>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Getlastcomments>>> GetlastcommentsAsync(string address, string lang)
+        public async Task<ActionResult<IEnumerable<Getlastcomments>>> GetlastcommentsAsync(string address, string lang, int resultCount)
         {
-            _logger.LogInformation("GetlastcommentsAsync", new object[] { address , lang });
+            _logger.LogInformation($"GetlastcommentsAsync Parameters: {address}, {lang}, {resultCount}" );
 
-            var items = await _repository.GetlastcommentsAsync(address, lang);
+            var items = await _repository.GetlastcommentsAsync(address, lang, resultCount);
 
             if (items == null)
             {

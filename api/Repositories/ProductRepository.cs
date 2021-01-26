@@ -1,4 +1,5 @@
-﻿using Catalog.API.Data.Interfaces;
+﻿using api.Repositories;
+using Catalog.API.Data.Interfaces;
 using Catalog.API.Entities;
 using Catalog.API.Repositories.Interfaces;
 using System;
@@ -40,39 +41,43 @@ namespace Catalog.API.Repositories
             return  res;
         }
 
-        public async Task<IEnumerable<Getlastcomments>> GetlastcommentsAsync(string address, string lang)
+        public async Task<IEnumerable<Getlastcomments>> GetlastcommentsAsync(string address, string lang, int resultCount = 10)
         {
+            if ( string.IsNullOrEmpty (lang)) { lang = "en"; }
 
-            if (lang == "") { lang = "en"; }
+            DateTime foo = DateTime.UtcNow; 
+            long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
             _context.Cmd.CommandText = @"select 
 c.txid,
 c.otxid,
-c.last,
 c.postid,
 c.address,
 c.time,
 c.block,
 c.msg,
-c.parentid/*,
+c.parentid,
 c.answerid,
 c.scoreUp,
 c.scoreDown,
-c.reputation */  
+c.reputation   
        ,(select ci.time from Comment ci where ci.txid=c.otxid order by ci.time desc limit 1)ocmntTime
        ,(select cs.value from CommentScores cs where cs.commentid=c.otxid and cs.address=$address order by cs.time desc limit 1)myScore
        from Comment c, Posts p
 where
       p.txid=c.postid and
       p.lang=$lang and
-      c.time<=1610615221 and
+      c.time<=$unixTime and
       c.last=1
 order by c.time asc
-limit 10";
+limit $resultCount";
 
             _context.Cmd.Parameters.Clear();
             _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType= Microsoft.Data.Sqlite.SqliteType.Text;
             _context.Cmd.Parameters.AddWithValue("$lang", lang).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+            _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+
 
 
             List<Getlastcomments> res = new List<Getlastcomments>();
@@ -83,51 +88,28 @@ limit 10";
                 {
                     res.Add(new Getlastcomments()
                     {
-                        id = reader.GetString(0),
-                        postid = reader.GetString(1),
-                        address = reader.GetString(2)
-                        //Summary = reader.GetString(2),
-                        //Description = reader.GetString(3),
-                        //Price = reader.GetInt32(4)
-                        /*
-                                oCmnt.pushKV("id", cmntItm["otxid"].As<string>());
-                    oCmnt.pushKV("postid", cmntItm["postid"].As<string>());
-                    oCmnt.pushKV("address", cmntItm["address"].As<string>());
-                    oCmnt.pushKV("time", ocmntItm["time"].As<string>());
-                    oCmnt.pushKV("timeUpd", cmntItm["time"].As<string>());
-                    oCmnt.pushKV("block", cmntItm["block"].As<string>());
-                    oCmnt.pushKV("msg", cmntItm["msg"].As<string>());
-                    oCmnt.pushKV("parentid", cmntItm["parentid"].As<string>());
-                    oCmnt.pushKV("answerid", cmntItm["answerid"].As<string>());
-                    oCmnt.pushKV("scoreUp", cmntItm["scoreUp"].As<string>());
-                    oCmnt.pushKV("scoreDown", cmntItm["scoreDown"].As<string>());
-                    oCmnt.pushKV("reputation", cmntItm["reputation"].As<string>());
-                    oCmnt.pushKV("edit", cmntItm["otxid"].As<string>() != cmntItm["txid"].As<string>());
-                    oCmnt.pushKV("deleted", cmntItm["msg"].As<string>() == "");
-                    oCmnt.pushKV("myScore", myScore);
-                        */
-
-                });
+                        id = reader.SafeGetString("otxid"),
+                        postid = reader.SafeGetString("postid"),
+                        address = reader.SafeGetString("address"),
+                        time = reader.SafeGetInt32("ocmntTime"),
+                        timeUpd = reader.SafeGetInt32("time"),
+                        block = reader.SafeGetInt32("block"),
+                        msg = reader.SafeGetString ("msg") ,// .GetString(6),
+                        parentid = reader.SafeGetString("parentid"),
+                        answerid = reader.SafeGetString("answerid"),
+                        scoreUp = reader.SafeGetInt32("scoreUp"),
+                        scoreDown = reader.SafeGetInt32("scoreDown"),
+                        reputation = reader.SafeGetInt32("reputation"),
+                        edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")) ? 1 : 0,
+                        deleted = (reader.SafeGetString("msg") == "") ? 1 : 0,
+                        myScore = reader.SafeGetInt32("myScore", 0) // reader.GetInt32(13)
+                    });
 
                 }
             }
 
             return res;
         }
-
-        /*
-         select c.*
-       ,(select ci.time from Comment ci where ci.txid=c.otxid order by ci.time desc limit 1)ocmntTime
-       ,(select cs.value from CommentScores cs where cs.commentid=c.otxid and cs.address='PBaFNz7VNA35GE9rZw6RLqhyECkhENShJi' order by cs.time desc limit 1)myScore
-       from Comment c, Posts p
-where
-      p.txid=c.postid and
-      p.lang='en' and
-      c.time<=1610615221 and
-      c.last=1
-order by c.time asc
-limit 50
-        */
 
 
         public async Task<IEnumerable<Product>> GetProductByNameAsync(string name)

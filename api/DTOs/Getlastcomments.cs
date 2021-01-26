@@ -11,12 +11,12 @@
         public string msg { get; set; }
         public string parentid { get; set; }
         public string answerid { get; set; }
-        public int scoreUp { get; set; }
-        public int scoreDown { get; set; }
-        public int reputation { get; set; }
-        public string edit { get; set; }
-        public string deleted { get; set; }
-        public int myScore { get; set; }
+        public int? scoreUp { get; set; }
+        public int? scoreDown { get; set; }
+        public int? reputation { get; set; }
+        public int edit { get; set; }
+        public int deleted { get; set; }
+        public int? myScore { get; set; }
     }
 
     /*
