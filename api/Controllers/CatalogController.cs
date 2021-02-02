@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -33,10 +35,10 @@ namespace Catalog.API.Controllers
             return Ok(products);
         }
 
-        [HttpGet("{address:length(34)}", Name = "Getlastcomments")]
+        [HttpGet("Getlastcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Getlastcomments>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Getlastcomments>>> GetlastcommentsAsync(string address, string lang, int resultCount)
+        public async Task<ActionResult<IEnumerable<Getlastcomments>>> GetlastcommentsAsync([Required, MaxLength(34)] string address, string lang, [DefaultValue(10)] int resultCount)
         {
             _logger.LogInformation($"GetlastcommentsAsync Parameters: {address}, {lang}, {resultCount}" );
 
