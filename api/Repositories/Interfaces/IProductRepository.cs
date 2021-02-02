@@ -7,7 +7,8 @@ namespace Catalog.API.Repositories.Interfaces
     public interface IProductRepository
     {
         Task<IEnumerable<Product>> GetProductsAsync();
-        Task<IEnumerable<Getlastcomments>> GetlastcommentsAsync(string address, string lang, int resultCount);
+        Task<IEnumerable<Comment>> GetcommentsAsync(string postid, string parentid, string address, string[] comment_ids);
+        Task<IEnumerable<Comment>> GetlastcommentsAsync(string address, string lang, int resultCount);
         Task<IEnumerable<Product>> GetProductByNameAsync(string name);
         Task<IEnumerable<Product>> GetProductByCategoryAsync(string categoryName);
                       

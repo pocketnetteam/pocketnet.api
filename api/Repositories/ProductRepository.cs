@@ -38,14 +38,14 @@ namespace Catalog.API.Repositories
                 }
             }
 
-            return  res;
+            return res;
         }
 
-        public async Task<IEnumerable<Getlastcomments>> GetlastcommentsAsync(string address, string lang, int resultCount = 10)
+        public async Task<IEnumerable<Comment>> GetlastcommentsAsync(string address, string lang, int resultCount = 10)
         {
-            if ( string.IsNullOrEmpty (lang)) { lang = "en"; }
+            if (string.IsNullOrEmpty(lang)) { lang = "en"; }
 
-            DateTime foo = DateTime.UtcNow; 
+            DateTime foo = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
             _context.Cmd.CommandText = @"select 
@@ -73,20 +73,18 @@ order by c.time asc
 limit $resultCount";
 
             _context.Cmd.Parameters.Clear();
-            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType= Microsoft.Data.Sqlite.SqliteType.Text;
+            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
             _context.Cmd.Parameters.AddWithValue("$lang", lang).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
             _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
             _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
 
-
-
-            List<Getlastcomments> res = new List<Getlastcomments>();
+            List<Comment> res = new List<Comment>();
 
             using (var reader = await _context.Cmd.ExecuteReaderAsync())
             {
                 while (reader.Read())
                 {
-                    res.Add(new Getlastcomments()
+                    res.Add(new Comment()
                     {
                         id = reader.SafeGetString("otxid"),
                         postid = reader.SafeGetString("postid"),
@@ -94,20 +92,84 @@ limit $resultCount";
                         time = reader.SafeGetInt32("ocmntTime"),
                         timeUpd = reader.SafeGetInt32("time"),
                         block = reader.SafeGetInt32("block"),
-                        msg = reader.SafeGetString ("msg") ,// .GetString(6),
+                        msg = reader.SafeGetString("msg"),
                         parentid = reader.SafeGetString("parentid"),
                         answerid = reader.SafeGetString("answerid"),
                         scoreUp = reader.SafeGetInt32("scoreUp"),
                         scoreDown = reader.SafeGetInt32("scoreDown"),
                         reputation = reader.SafeGetInt32("reputation"),
-                        edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")) ? 1 : 0,
-                        deleted = (reader.SafeGetString("msg") == "") ? 1 : 0,
-                        myScore = reader.SafeGetInt32("myScore", 0) // reader.GetInt32(13)
+                        edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")),
+                        deleted = (reader.SafeGetString("msg") == ""),
+                        myScore = reader.SafeGetInt32("myScore", 0)
                     });
 
                 }
             }
 
+            return res;
+        }
+
+        public async Task<IEnumerable<Comment>> GetcommentsAsync(string postid, string parentid, string address, string[] comment_ids)
+        {
+            DateTime foo = DateTime.UtcNow;
+            long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
+            /*
+            _context.Cmd.CommandText = @"select 
+c.txid,
+c.otxid,
+c.postid,
+c.address,
+c.time,
+c.block,
+c.msg,
+c.parentid,
+c.answerid,
+c.scoreUp,
+c.scoreDown,
+c.reputation   
+       ,(select ci.time from Comment ci where ci.txid=c.otxid order by ci.time desc limit 1)ocmntTime
+       ,(select cs.value from CommentScores cs where cs.commentid=c.otxid and cs.address=$address order by cs.time desc limit 1)myScore
+       from Comment c, Posts p
+where
+      p.txid=c.postid and
+      p.lang=$lang and
+      c.time<=$unixTime and
+      c.last=1
+order by c.time asc
+limit $resultCount";
+
+            _context.Cmd.Parameters.Clear();
+            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+            _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            */
+            List<Comment> res = new List<Comment>();
+            /*
+            using (var reader = await _context.Cmd.ExecuteReaderAsync())
+            {
+                while (reader.Read())
+                {
+                    res.Add(new Comment()
+                    {
+                        id = reader.SafeGetString("otxid"),
+                        postid = reader.SafeGetString("postid"),
+                        address = reader.SafeGetString("address"),
+                        time = reader.SafeGetInt32("ocmntTime"),
+                        timeUpd = reader.SafeGetInt32("time"),
+                        block = reader.SafeGetInt32("block"),
+                        msg = reader.SafeGetString("msg"),
+                        parentid = reader.SafeGetString("parentid"),
+                        answerid = reader.SafeGetString("answerid"),
+                        scoreUp = reader.SafeGetInt32("scoreUp"),
+                        scoreDown = reader.SafeGetInt32("scoreDown"),
+                        reputation = reader.SafeGetInt32("reputation"),
+                        edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")),
+                        deleted = (reader.SafeGetString("msg") == ""),
+                        myScore = reader.SafeGetInt32("myScore", 0)
+                    });
+
+                }
+            }
+            */
             return res;
         }
 
@@ -125,7 +187,7 @@ limit $resultCount";
         //public async Task CreateAsync(Product product)
         //{
         //    throw new NotImplementedException();
- 
+
         //}
 
         //public async Task<bool> UpdateAsync(Product product)

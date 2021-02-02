@@ -35,10 +35,10 @@ namespace Catalog.API.Controllers
 
         [HttpGet("{address:length(34)}", Name = "Getlastcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
-        [ProducesResponseType(typeof(IEnumerable<Getlastcomments>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Getlastcomments>>> GetlastcommentsAsync(string address, string lang, int resultCount)
+        [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<Comment>>> GetlastcommentsAsync(string address, string lang, int resultCount)
         {
-            _logger.LogInformation($"GetlastcommentsAsync Parameters: {address}, {lang}, {resultCount}" );
+            _logger.LogInformation($"GetlastcommentsAsync Parameters: {address}, {lang}, {resultCount}");
 
             var items = await _repository.GetlastcommentsAsync(address, lang, resultCount);
 
@@ -50,9 +50,26 @@ namespace Catalog.API.Controllers
 
             return Ok(items);
         }
+        /*
+        [HttpGet(Name = "Getcomments")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<Comment>>> GetcommentsAsync(string postid, string parentid, string address, string[] comment_ids)
+        {
+            _logger.LogInformation($"GetcommentsAsync Parameters: {postid}, {parentid}, {address}");
 
+            var items = await _repository.GetcommentsAsync(postid, parentid, address, comment_ids);
+
+            if (items == null)
+            {
+                _logger.LogError($"Getcomments No records: {postid}, {parentid}, {address}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }*/
         [Route("[action]/{category}")]
-        [HttpGet]        
+        [HttpGet]
         [ProducesResponseType(typeof(Product), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<Product>>> GetProductByCategory(string category)
         {

@@ -1,6 +1,6 @@
 ﻿namespace Catalog.API.Entities
 {
-    public class Get_lastcomments
+    public class Comment
     {
         public string id { get; set; }
         public string postid { get; set; }
@@ -17,9 +17,10 @@
         public bool edit { get; set; }
         public bool deleted { get; set; }
         public int? myScore { get; set; }
+        public string? children { get; set; }
     }
 
-    /*
+    /*   
         oCmnt.pushKV("id", cmntItm["otxid"].As<string>());
         oCmnt.pushKV("postid", cmntItm["postid"].As<string>());
         oCmnt.pushKV("address", cmntItm["address"].As<string>());
@@ -34,6 +35,7 @@
         oCmnt.pushKV("reputation", cmntItm["reputation"].As<string>());
         oCmnt.pushKV("edit", cmntItm["otxid"].As<string>() != cmntItm["txid"].As<string>());
         oCmnt.pushKV("deleted", cmntItm["msg"].As<string>() == "");
-        //oCmnt.pushKV("myScore", myScore);
+        oCmnt.pushKV("myScore", myScore);
+        oCmnt.pushKV("children",
 */
 }
