@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -33,10 +35,10 @@ namespace Catalog.API.Controllers
             return Ok(products);
         }
 
-        [HttpGet("{address:length(34)}", Name = "Getlastcomments")]
+        [HttpGet("Getlastcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Comment>>> GetlastcommentsAsync(string address, string lang, int resultCount)
+        public async Task<ActionResult<IEnumerable<Comment>>> GetlastcommentsAsync([Required, MaxLength(34)] string address, string lang, [DefaultValue(100)] int resultCount)
         {
             _logger.LogInformation($"GetlastcommentsAsync Parameters: {address}, {lang}, {resultCount}");
 
@@ -50,15 +52,15 @@ namespace Catalog.API.Controllers
 
             return Ok(items);
         }
-        /*
-        [HttpGet(Name = "Getcomments")]
+        
+        [HttpGet("Getcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Comment>>> GetcommentsAsync(string postid, string parentid, string address, string[] comment_ids)
+        public async Task<ActionResult<IEnumerable<Comment>>> GetcommentsAsync(string postid, string parentid, string address, string comment_ids, [DefaultValue(100)] int resultCount)
         {
             _logger.LogInformation($"GetcommentsAsync Parameters: {postid}, {parentid}, {address}");
 
-            var items = await _repository.GetcommentsAsync(postid, parentid, address, comment_ids);
+            var items = await _repository.GetcommentsAsync(postid, parentid, address, comment_ids, resultCount);
 
             if (items == null)
             {
@@ -67,7 +69,7 @@ namespace Catalog.API.Controllers
             }
 
             return Ok(items);
-        }*/
+        }
         [Route("[action]/{category}")]
         [HttpGet]
         [ProducesResponseType(typeof(Product), (int)HttpStatusCode.OK)]
