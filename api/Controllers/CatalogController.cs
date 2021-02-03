@@ -25,17 +25,6 @@ namespace Catalog.API.Controllers
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        [HttpGet]
-        [ProducesResponseType(typeof(IEnumerable<Product>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
-        {
-
-            _logger.LogInformation("GetProducts", null);
-
-            var products = await _repository.GetProductsAsync();
-            return Ok(products);
-        }
-
         [HttpGet("Getlastcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
@@ -76,9 +65,12 @@ namespace Catalog.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<Score>), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<Score>>> GetpagescoresAsync(string tx_ids, string address, string comment_ids, [DefaultValue(100)] int resultCount)
         {
-            _logger.LogInformation($"GetpagescoresAsync Parameters: {tx_ids}, {address}, {comment_ids}");
+            _logger.LogInformation($"GetpagescoresAsync Parameters Start: {tx_ids}, {address}, {comment_ids}");
 
             var items = await _repository.GetpagescoresAsync(tx_ids,  address,  comment_ids, resultCount);
+            
+            _logger.LogInformation($"GetpagescoresAsync Stop");
+            
             if (items == null)
             {
                 _logger.LogError($"GetpagescoresAsync No records: {tx_ids}, {address}, {comment_ids}");
