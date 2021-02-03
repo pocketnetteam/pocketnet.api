@@ -1,4 +1,5 @@
-﻿using Catalog.API.Entities;
+﻿using api.DTOs;
+using Catalog.API.Entities;
 using Catalog.API.Repositories.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -70,36 +71,22 @@ namespace Catalog.API.Controllers
 
             return Ok(items);
         }
-        [Route("[action]/{category}")]
-        [HttpGet]
-        [ProducesResponseType(typeof(Product), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Product>>> GetProductByCategory(string category)
+        [HttpGet("Getpagescores")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<Score>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<Score>>> GetpagescoresAsync(string tx_ids, string address, string comment_ids, [DefaultValue(100)] int resultCount)
         {
-            var product = await _repository.GetProductByCategoryAsync(category);
-            return Ok(product);
+            _logger.LogInformation($"GetpagescoresAsync Parameters: {tx_ids}, {address}, {comment_ids}");
+
+            var items = await _repository.GetpagescoresAsync(tx_ids,  address,  comment_ids, resultCount);
+            if (items == null)
+            {
+                _logger.LogError($"GetpagescoresAsync No records: {tx_ids}, {address}, {comment_ids}");
+                return NotFound();
+            }
+
+            return Ok(items);
         }
 
-        //[HttpPost]
-        //[ProducesResponseType(typeof(Product), (int)HttpStatusCode.Created)]
-        //public async Task<ActionResult<Product>> CreateProduct([FromBody] Product product)
-        //{
-        //    await _repository.CreateAsync(product);
-
-        //    return CreatedAtRoute("GetProduct", new { id = product.Id }, product);
-        //}
-
-        //[HttpPut]
-        //[ProducesResponseType(typeof(Product), (int)HttpStatusCode.OK)]
-        //public async Task<IActionResult> UpdateProduct([FromBody] Product value)
-        //{
-        //    return Ok(await _repository.UpdateAsync(value));
-        //}
-
-        //[HttpDelete("{id:length(24)}")]
-        //[ProducesResponseType(typeof(void), (int)HttpStatusCode.OK)]
-        //public async Task<IActionResult> DeleteProductById(string id)
-        //{
-        //    return Ok(await _repository.DeleteAsync(id));
-        //}
     }
 }

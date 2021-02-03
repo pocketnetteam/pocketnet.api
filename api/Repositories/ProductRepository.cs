@@ -1,8 +1,8 @@
-﻿using api.Repositories;
+﻿using api.DTOs;
+using api.Repositories;
 using Catalog.API.Data.Interfaces;
 using Catalog.API.Entities;
 using Catalog.API.Repositories.Interfaces;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -114,27 +114,18 @@ limit $resultCount";
         {
             DateTime foo = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
-            List<string> comment_idsLst = new List<string>();
 
             if (string.IsNullOrEmpty(postid)) { postid = ""; }
             if (string.IsNullOrEmpty(parentid)) { parentid = ""; }
             if (string.IsNullOrEmpty(address)) { address = ""; }
+            if (string.IsNullOrEmpty(comment_ids)) { comment_ids = ""; }
 
-            if (comment_ids != "")
-            {
-                try
-                {
-                    comment_idsLst = JArray.Parse(comment_ids).ToObject<List<string>>();
-                    comment_idsLst.ForEach(x => x.Replace("'", ""));
-                }
-                catch { }
-            }
+            List<string> comment_idsLst = comment_ids.FromJArray();
 
             _context.Cmd.Parameters.Clear();
 
             _context.Cmd.CommandText = @"select c.txid,
 c.otxid,
-c.last,
 c.postid,
 c.address,
 c.time,
@@ -206,30 +197,76 @@ limit $resultCount";
         }
 
 
-        public async Task<IEnumerable<Product>> GetProductByNameAsync(string name)
+        public async Task<IEnumerable<Score>> GetpagescoresAsync(string tx_ids, string address, string comment_ids, int resultCount = 100)
         {
-            throw new NotImplementedException();
+
+            if (string.IsNullOrEmpty(tx_ids)) { tx_ids = ""; }
+            if (string.IsNullOrEmpty(address)) { address = ""; }
+            if (string.IsNullOrEmpty(comment_ids)) { comment_ids = ""; }
+
+            List<string> tx_idsLst = tx_ids.FromJArray();
+            List<string> comment_idsLst = comment_ids.FromJArray();
+
+            DateTime foo = DateTime.UtcNow;
+            long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
+
+
+            _context.Cmd.CommandText = @"select c.txid,
+c.otxid,
+c.scoreUp,
+c.scoreDown,
+c.reputation
+       ,(select cs.value from CommentScores cs where cs.commentid = c.otxid and cs.address = $address order by cs.time desc limit 1)myScore
+    from Comment c
+where
+      c.otxid in ({0}) and
+      c.time <= $unixTime and
+      c.last = 1
+order by c.time asc
+limit $resultCount";
+
+
+            _context.Cmd.Parameters.Clear();
+            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+            _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            _context.Cmd.CommandText = String.Format(_context.Cmd.CommandText, $"'{string.Join("','", comment_idsLst)}'");
+
+            List<Score> res = new List<Score>();
+
+            // TODO
+            //1. Add postlikers from private subscribes
+            //2. Add postlikers from not private subscribes
+            //3. Add postlikers from not subscribes
+
+
+
+            using (var reader = await _context.Cmd.ExecuteReaderAsync())
+            {
+                while (reader.Read())
+                {
+                    res.Add(new Score()
+                    {
+                        cmntid = reader.SafeGetString("otxid"),
+                        scoreUp = reader.SafeGetInt32("scoreUp"),
+                        scoreDown = reader.SafeGetInt32("scoreDown"),
+                        reputation = reader.SafeGetInt32("reputation"),
+                        myScore = reader.SafeGetInt32("myScore", 0)
+                    });
+
+                }
+            }
+
+            return res;
+
+            /*
+        cmntscore.pushKV("cmntid", cmntItm["otxid"].As<string>());
+        cmntscore.pushKV("scoreUp", cmntItm["scoreUp"].As<string>());
+        cmntscore.pushKV("scoreDown", cmntItm["scoreDown"].As<string>());
+        cmntscore.pushKV("reputation", cmntItm["reputation"].As<string>());
+        if (cit.GetJoined().size() > 0) cmntscore.pushKV("myscore", cit.GetJoined()[0][0].GetItem()["value"].As<string>());
+            */
         }
-
-        public async Task<IEnumerable<Product>> GetProductByCategoryAsync(string categoryName)
-        {
-            throw new NotImplementedException();
-        }
-
-        //public async Task CreateAsync(Product product)
-        //{
-        //    throw new NotImplementedException();
-
-        //}
-
-        //public async Task<bool> UpdateAsync(Product product)
-        //{
-        //    throw new NotImplementedException();
-        //}
-
-        //public async Task<bool> DeleteAsync(string id)
-        //{
-        //    throw new NotImplementedException();
-        //}        
+     
     }
 }

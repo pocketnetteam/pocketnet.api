@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,4 +38,25 @@ namespace api.Repositories
             }
         }
     }
+
+
+    public static class StringExtensions
+    {
+        public static List<string> FromJArray(this string jarray)
+        {
+            List<string> res = new List<string>();
+            if (jarray != "")
+            {
+                try
+                {
+                    res = JArray.Parse(jarray).ToObject<List<string>>();
+                    res.ForEach(x => x.Replace("'", ""));
+                }
+                catch { }
+            }
+
+            return res;
+        }
+    }
+
 }
