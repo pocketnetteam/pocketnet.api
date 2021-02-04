@@ -35,6 +35,9 @@ namespace Catalog.API
 
             #region Configuration Dependencies
 
+            // TODO implement total Cache invalidation  https://stackoverflow.com/questions/34406737/how-to-remove-all-objects-reset-from-imemorycache-in-asp-net-core ?
+            services.AddMemoryCache();
+
             services.Configure<CatalogDatabaseSettings>(Configuration.GetSection(nameof(CatalogDatabaseSettings)));
 
             services.AddSingleton<ICatalogDatabaseSettings>(sp =>
@@ -44,9 +47,12 @@ namespace Catalog.API
 
             #region Project Dependencies
 
+            //services.AddSingleton<IProductRepository, ProductRepository>();
+            //services.AddSingleton<ICatalogContext, CatalogContext>();
+            
             services.AddScoped<IProductRepository, ProductRepository>();
             services.AddScoped<ICatalogContext, CatalogContext>();
-
+            
             #endregion
 
             #region Swagger Dependencies

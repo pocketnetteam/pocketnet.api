@@ -202,9 +202,6 @@ limit $resultCount";
         {
             //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 1");
 
-            if (string.IsNullOrEmpty(tx_ids)) { tx_ids = ""; }
-            if (string.IsNullOrEmpty(address)) { address = ""; }
-            if (string.IsNullOrEmpty(comment_ids)) { comment_ids = ""; }
 
             List<string> tx_idsLst = tx_ids.FromJArray();
             List<string> comment_idsLst = comment_ids.FromJArray();
@@ -213,7 +210,6 @@ limit $resultCount";
 
             DateTime foo = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
-
 
             _context.Cmd.CommandText = @"select c.txid,
 c.otxid,
@@ -263,17 +259,9 @@ limit $resultCount";
 
                 }
             }
-            //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 5");//166 ms
+            //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 5\r\n");//166 ms
 
             return res;
-
-            /*
-        cmntscore.pushKV("cmntid", cmntItm["otxid"].As<string>());
-        cmntscore.pushKV("scoreUp", cmntItm["scoreUp"].As<string>());
-        cmntscore.pushKV("scoreDown", cmntItm["scoreDown"].As<string>());
-        cmntscore.pushKV("reputation", cmntItm["reputation"].As<string>());
-        if (cit.GetJoined().size() > 0) cmntscore.pushKV("myscore", cit.GetJoined()[0][0].GetItem()["value"].As<string>());
-            */
         }
      
     }

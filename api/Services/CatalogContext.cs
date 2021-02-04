@@ -19,8 +19,8 @@ namespace Catalog.API.Data
 
             Connection = new   SqliteConnection(settings.ConnectionString);
             Connection.Open();
-
-            _logger.LogInformation("connection.Open", null);
+            
+            // _logger.LogInformation("connection.Open", null);
 
             Cmd = new SqliteCommand("", Connection);
 
@@ -28,12 +28,12 @@ namespace Catalog.API.Data
             Cmd.CommandText =   @"PRAGMA journal_mode = 'wal'";
             Cmd.ExecuteNonQuery();
 
-            CatalogContextSeed.SeedData(Cmd);
+            //CatalogContextSeed.SeedData(Cmd);
         }
 
         public void Dispose()
         {
-            _logger.LogInformation("connection.Close", null);
+       //     _logger.LogInformation("connection.Close", null);
 
             if (Connection != null && Connection.State == System.Data.ConnectionState.Open) Connection.Close();
         }
