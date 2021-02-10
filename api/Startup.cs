@@ -9,7 +9,6 @@ using Catalog.API.Repositories.Interfaces;
 using Catalog.API.Settings;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -47,11 +46,8 @@ namespace Catalog.API
 
             #region Project Dependencies
 
-            //services.AddSingleton<IProductRepository, ProductRepository>();
-            //services.AddSingleton<ICatalogContext, CatalogContext>();
-            
             services.AddScoped<IProductRepository, ProductRepository>();
-            services.AddScoped<ICatalogContext, CatalogContext>();
+            services.AddSingleton<ICatalogContext, CatalogContext>();
             
             #endregion
 

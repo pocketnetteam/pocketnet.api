@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
@@ -22,7 +23,7 @@ namespace Catalog.API
             .ConfigureLogging((hostingContext, logging) =>
             {
                 logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
-                logging.AddDebug();
+                //logging.AddDebug();
                 logging.AddNLog();
             })
             .ConfigureWebHostDefaults(webBuilder =>

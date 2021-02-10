@@ -7,15 +7,20 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Catalog.API.Data;
+using Microsoft.Extensions.Logging;
+using System.Data.SQLite;
 
 namespace Catalog.API.Repositories
 {
     public class ProductRepository : IProductRepository
     {
+        private readonly ILogger<CatalogContext> _logger;
         private readonly ICatalogContext _context;
 
-        public ProductRepository(ICatalogContext catalogContext)
+        public ProductRepository(ICatalogContext catalogContext, ILogger<CatalogContext> logger)
         {
+            _logger = logger;
             _context = catalogContext ?? throw new ArgumentNullException(nameof(catalogContext));
         }
 
@@ -43,6 +48,7 @@ namespace Catalog.API.Repositories
             return res;
         }
 
+        private static Random rnd = new Random();
         public async Task<IEnumerable<Comment>> GetlastcommentsAsync(string address, string lang, int resultCount = 100)
         {
             if (string.IsNullOrEmpty(lang)) { lang = "en"; }
@@ -50,63 +56,72 @@ namespace Catalog.API.Repositories
             DateTime foo = DateTime.UtcNow;
             long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
-            _context.Cmd.CommandText = @"select 
-c.txid,
-c.otxid,
-c.postid,
-c.address,
-c.time,
-c.block,
-c.msg,
-c.parentid,
-c.answerid,
-c.scoreUp,
-c.scoreDown,
-c.reputation   
-       ,(select ci.time from Comment ci where ci.txid=c.otxid order by ci.time desc limit 1)ocmntTime
-       ,(select cs.value from CommentScores cs where cs.commentid=c.otxid and cs.address=$address order by cs.time desc limit 1)myScore
-       from Comment c, Posts p
-where
-      p.txid=c.postid and
-      p.lang=$lang and
-      c.time<=$unixTime and
-      c.last=1
-order by c.time asc
-limit $resultCount";
+            var cmd = new SQLiteCommand();
+            cmd.Connection = _context.Connections[rnd.Next(0, 9)];
+            cmd.CommandText = @"select 
+                c.txid,
+                c.postid,
+                c.address,
+                c.time,
+                c.block,
+                c.msg,
+                c.parentid,
+                c.answerid,
+                c.scoreUp,
+                c.scoreDown,
+                c.reputation   
+                       ,(select ci.time from Comment ci where ci.txid=c.otxid order by ci.time desc limit 1)ocmntTime
+                       ,(select cs.value from CommentScores cs where cs.commentid=c.otxid and cs.address=$address order by cs.time desc limit 1)myScore
+                       from Comment c, Posts p
+                where
+                      p.txid=c.postid and
+                      p.lang=$lang and
+                      c.time<=$unixTime and
+                      c.last=1
+                order by c.time asc
+                limit $resultCount";
 
-            _context.Cmd.Parameters.Clear();
-            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-            _context.Cmd.Parameters.AddWithValue("$lang", lang).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-            _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
-            _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            cmd.Parameters.Clear();
+            cmd.Parameters.AddWithValue("$address", address).DbType = System.Data.DbType.String;
+            cmd.Parameters.AddWithValue("$lang", lang).DbType = System.Data.DbType.String;
+            cmd.Parameters.AddWithValue("$resultCount", resultCount).DbType = System.Data.DbType.Int32;
+            cmd.Parameters.AddWithValue("$unixTime", unixTime).DbType = System.Data.DbType.Int64;
 
             List<Comment> res = new List<Comment>();
 
-            using (var reader = await _context.Cmd.ExecuteReaderAsync())
+            var begin = DateTime.Now;
+            var end = DateTime.Now;
+            var end2 = DateTime.Now;
+            using (var reader = await cmd.ExecuteReaderAsync())
             {
+                end = DateTime.Now;
+
                 while (reader.Read())
                 {
                     res.Add(new Comment()
                     {
-                        id = reader.SafeGetString("otxid"),
+                        id = reader.SafeGetString("txid"),
                         postid = reader.SafeGetString("postid"),
                         address = reader.SafeGetString("address"),
-                        time = reader.SafeGetInt32("ocmntTime"),
-                        timeUpd = reader.SafeGetInt32("time"),
-                        block = reader.SafeGetInt32("block"),
-                        msg = reader.SafeGetString("msg"),
-                        parentid = reader.SafeGetString("parentid"),
-                        answerid = reader.SafeGetString("answerid"),
-                        scoreUp = reader.SafeGetInt32("scoreUp"),
-                        scoreDown = reader.SafeGetInt32("scoreDown"),
-                        reputation = reader.SafeGetInt32("reputation"),
-                        edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")),
-                        deleted = (reader.SafeGetString("msg") == ""),
-                        myScore = reader.SafeGetInt32("myScore", 0)
+                        time = reader.SafeGetInt32("time"),
+                        //timeUpd = reader.GetInt32(5),
+                        //block = reader.GetInt32(6),
+                        //msg = reader.GetString(7),
+                        //parentid = reader.GetString(8),
+                        //answerid = reader.GetString(9),
+                        //scoreUp = reader.GetInt32(10),
+                        //scoreDown = reader.GetInt32(11),
+                        //reputation = reader.GetInt32(12),
+                        //edit = (reader.GetString("txid") != reader.SafeGetString("otxid")),
+                        //deleted = (reader.GetString("msg") == ""),
+                        //myScore = reader.GetInt32("myScore", 0)
                     });
-
                 }
+
+                end2 = DateTime.Now;
             }
+            var end3 = DateTime.Now;
+            _logger.LogWarning($"{(end - begin).TotalMilliseconds} {(end2 - begin).TotalMilliseconds} {(end3 - begin).TotalMilliseconds}");
 
             return res;
         }
@@ -152,8 +167,8 @@ limit $resultCount";
             {
                 _context.Cmd.CommandText = _context.Cmd.CommandText.Replace("$WHERE$", @"c.postid = $postid and c.parentid = $parentid and");
 
-                _context.Cmd.Parameters.AddWithValue("$postid", postid).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-                _context.Cmd.Parameters.AddWithValue("$parentid", parentid).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+                //_context.Cmd.Parameters.AddWithValue("$postid", postid).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+                //_context.Cmd.Parameters.AddWithValue("$parentid", parentid).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
             }
             else
             {
@@ -161,9 +176,9 @@ limit $resultCount";
                 _context.Cmd.CommandText = String.Format(_context.Cmd.CommandText, $"'{string.Join("','", comment_idsLst)}'");
             }
 
-            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-            _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
-            _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            //_context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+            //_context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            //_context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
 
             List<Comment> res = new List<Comment>();
             
@@ -173,22 +188,22 @@ limit $resultCount";
                 {
                     res.Add(new Comment()
                     {
-                        id = reader.SafeGetString("otxid"),
-                        postid = reader.SafeGetString("postid"),
-                        address = reader.SafeGetString("address"),
-                        time = reader.SafeGetInt32("ocmntTime"),
-                        timeUpd = reader.SafeGetInt32("time"),
-                        block = reader.SafeGetInt32("block"),
-                        msg = reader.SafeGetString("msg"),
-                        parentid = reader.SafeGetString("parentid"),
-                        answerid = reader.SafeGetString("answerid"),
-                        scoreUp = reader.SafeGetInt32("scoreUp"),
-                        scoreDown = reader.SafeGetInt32("scoreDown"),
-                        reputation = reader.SafeGetInt32("reputation"),
-                        edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")),
-                        deleted = (reader.SafeGetString("msg") == ""),
-                        myScore = reader.SafeGetInt32("myScore", 0),
-                        children = reader.SafeGetString("children", "0")
+                        //id = reader.SafeGetString("otxid"),
+                        //postid = reader.SafeGetString("postid"),
+                        //address = reader.SafeGetString("address"),
+                        //time = reader.SafeGetInt32("ocmntTime"),
+                        //timeUpd = reader.SafeGetInt32("time"),
+                        //block = reader.SafeGetInt32("block"),
+                        //msg = reader.SafeGetString("msg"),
+                        //parentid = reader.SafeGetString("parentid"),
+                        //answerid = reader.SafeGetString("answerid"),
+                        //scoreUp = reader.SafeGetInt32("scoreUp"),
+                        //scoreDown = reader.SafeGetInt32("scoreDown"),
+                        //reputation = reader.SafeGetInt32("reputation"),
+                        //edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")),
+                        //deleted = (reader.SafeGetString("msg") == ""),
+                        //myScore = reader.SafeGetInt32("myScore", 0),
+                        //children = reader.SafeGetString("children", "0")
                     });
 
                 }
@@ -228,9 +243,9 @@ limit $resultCount";
             //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 3");// 5 ms
 
             _context.Cmd.Parameters.Clear();
-            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-            _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
-            _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            //_context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+            //_context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            //_context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
             _context.Cmd.CommandText = String.Format(_context.Cmd.CommandText, $"'{string.Join("','", comment_idsLst)}'");
 
             //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 4");// 4 ms
@@ -250,11 +265,11 @@ limit $resultCount";
                 {
                     res.Add(new Score()
                     {
-                        cmntid = reader.SafeGetString("otxid"),
-                        scoreUp = reader.SafeGetInt32("scoreUp"),
-                        scoreDown = reader.SafeGetInt32("scoreDown"),
-                        reputation = reader.SafeGetInt32("reputation"),
-                        myScore = reader.SafeGetInt32("myScore", 0)
+                        //cmntid = reader.SafeGetString("otxid"),
+                        //scoreUp = reader.SafeGetInt32("scoreUp"),
+                        //scoreDown = reader.SafeGetInt32("scoreDown"),
+                        //reputation = reader.SafeGetInt32("reputation"),
+                        //myScore = reader.SafeGetInt32("myScore", 0)
                     });
 
                 }

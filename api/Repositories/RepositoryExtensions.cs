@@ -1,7 +1,8 @@
-﻿using Microsoft.Data.Sqlite;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Data.SQLite;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -9,8 +10,8 @@ namespace api.Repositories
 {
     public static class SqlDataReaderExtensions
     {
-        public static int SafeGetInt32(this SqliteDataReader reader,
-                                       string columnName, int defaultValue=0)
+        public static int SafeGetInt32(this DbDataReader reader,
+                                       string columnName, int defaultValue = 0)
         {
             int ordinal = reader.GetOrdinal(columnName);
 
@@ -23,8 +24,8 @@ namespace api.Repositories
                 return defaultValue;
             }
         }
-        public static string SafeGetString(this SqliteDataReader reader,
-                               string columnName, string defaultValue ="")
+        public static string SafeGetString(this DbDataReader reader,
+                               string columnName, string defaultValue = "")
         {
             int ordinal = reader.GetOrdinal(columnName);
 

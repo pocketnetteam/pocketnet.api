@@ -1,13 +1,13 @@
 ﻿using Catalog.API.Entities;
-using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.Data.SQLite;
 
 namespace Catalog.API.Data
 {
     public class CatalogContextSeed
     {
-        public static void SeedData(SqliteCommand cmd)
+        public static void SeedData(SQLiteCommand cmd)
         {
             cmd.CommandText = @"CREATE TABLE if not exists Products(Id INTEGER PRIMARY KEY,  Name TEXT, Category TEXT, Summary TEXT, Description TEXT, Price INT)";
             cmd.ExecuteNonQuery();

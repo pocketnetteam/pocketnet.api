@@ -28,12 +28,30 @@ namespace Catalog.API.Controllers
             _cache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
         }
 
+        [HttpGet("debug")]
+        public async Task<ActionResult> debug()
+        {
+            // _logger.LogInformation($"GetlastcommentsAsync Parameters: {address}, {lang}, {resultCount}");
+
+            //var items = await _repository.GetlastcommentsAsync(address, lang, resultCount);
+
+            //if (items == null)
+            //{
+            //    _logger.LogError($"Getlastcomments No records: {address}, {lang}");
+            //    return NotFound();
+            //}
+
+            await Task.Delay(500);
+
+            return Ok();
+        }
+
         [HttpGet("Getlastcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<Comment>>> GetlastcommentsAsync([Required, MaxLength(34)] string address, string lang, [DefaultValue(100)] int resultCount)
         {
-            _logger.LogInformation($"GetlastcommentsAsync Parameters: {address}, {lang}, {resultCount}");
+            // _logger.LogInformation($"GetlastcommentsAsync Parameters: {address}, {lang}, {resultCount}");
 
             var items = await _repository.GetlastcommentsAsync(address, lang, resultCount);
 
