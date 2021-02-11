@@ -49,9 +49,6 @@ namespace Catalog.API
 
             #region Project Dependencies
 
-            //services.AddSingleton<IProductRepository, ProductRepository>();
-            //services.AddSingleton<ICatalogContext, CatalogContext>();
-
             services.AddCacheable<IProductRepository, ProductRepository>(ServiceLifetime.Scoped);
             services.AddScoped<ICatalogContext, CatalogContext>();
 

@@ -26,7 +26,7 @@ namespace api.Controllers
         [HttpGet("Getlastcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Comment>>> GetLastCommentsAsync([Required, MaxLength(34)] string address, string lang, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Comment>>> GetLastCommentsAsync([Required, MaxLength(34)] string address, [DefaultValue("en")] string lang, [DefaultValue(100)] int resultCount)
         {
             _logger.LogInformation($"GetLastCommentsAsync Parameters: {address}, {lang}, {resultCount}");
 
@@ -44,9 +44,9 @@ namespace api.Controllers
         [HttpGet("Getcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Comment>>> GetCommentsAsync(string postid, string parentid, string address, string comment_ids, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Comment>>> GetCommentsAsync([DefaultValue("")] string postid, [DefaultValue("")] string parentid, [DefaultValue("")] string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
         {
-           // _logger.LogInformation($"GetCommentsAsync Parameters: {postid}, {parentid}, {address}");
+            _logger.LogInformation($"GetCommentsAsync Parameters: {postid}, {parentid}, {address}");
 
             var items = await _repository.GetCommentsAsync(postid, parentid, address, comment_ids, resultCount);
 
@@ -64,7 +64,6 @@ namespace api.Controllers
         [ProducesResponseType(typeof(IEnumerable<Score>), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync([DefaultValue("")]string tx_ids, [DefaultValue("")]string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
         {
-            //TODO cache
             var items = await _repository.GetPageScoresAsync(tx_ids, address, comment_ids, resultCount);
 
             if (items == null)

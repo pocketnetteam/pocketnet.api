@@ -22,8 +22,6 @@ namespace api.Repositories
         [CacheableMethod(60)]
         public async Task<IEnumerable<Comment>> GetLastCommentsAsync(string address, string lang, int resultCount = 100)
         {
-            if (string.IsNullOrEmpty(lang)) { lang = "en"; }
-
             var foo = DateTime.UtcNow;
             var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
@@ -59,31 +57,30 @@ limit $resultCount";
 
             var res = new List<Comment>();
 
-            using (var reader = await _context.Cmd.ExecuteReaderAsync())
+            await using var reader = await _context.Cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                while (reader.Read())
+                res.Add(new Comment()
                 {
-                    res.Add(new Comment()
-                    {
-                        id = reader.SafeGetString("otxid"),
-                        postid = reader.SafeGetString("postId"),
-                        address = reader.SafeGetString("address"),
-                        time = reader.SafeGetInt32("ocmntTime"),
-                        timeUpd = reader.SafeGetInt32("time"),
-                        block = reader.SafeGetInt32("block"),
-                        msg = reader.SafeGetString("msg"),
-                        parentid = reader.SafeGetString("parentId"),
-                        answerid = reader.SafeGetString("answerid"),
-                        scoreUp = reader.SafeGetInt32("scoreUp"),
-                        scoreDown = reader.SafeGetInt32("scoreDown"),
-                        reputation = reader.SafeGetInt32("reputation"),
-                        edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")),
-                        deleted = (reader.SafeGetString("msg") == ""),
-                        myScore = reader.SafeGetInt32("myScore", 0)
-                    });
+                    id = reader.SafeGetString("otxid"),
+                    postid = reader.SafeGetString("postId"),
+                    address = reader.SafeGetString("address"),
+                    time = reader.SafeGetInt32("ocmntTime"),
+                    timeUpd = reader.SafeGetInt32("time"),
+                    block = reader.SafeGetInt32("block"),
+                    msg = reader.SafeGetString("msg"),
+                    parentid = reader.SafeGetString("parentId"),
+                    answerid = reader.SafeGetString("answerid"),
+                    scoreUp = reader.SafeGetInt32("scoreUp"),
+                    scoreDown = reader.SafeGetInt32("scoreDown"),
+                    reputation = reader.SafeGetInt32("reputation"),
+                    edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")),
+                    deleted = (reader.SafeGetString("msg") == ""),
+                    myScore = reader.SafeGetInt32("myScore", 0)
+                });
 
-                }
             }
+
 
             return res;
         }
@@ -171,12 +168,8 @@ limit $resultCount";
         [CacheableMethod(60)]
         public async Task<IEnumerable<Score>> GetPageScoresAsync(string txIds, string address, string commentIds, int resultCount = 100)
         {
-            //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 1");
-
             var txIdsLst = txIds.FromJArray();
             var commentIdsLst = commentIds.FromJArray();
-
-            //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 2");// 4 ms
 
             var foo = DateTime.UtcNow;
             var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
@@ -195,15 +188,12 @@ where
 order by c.time asc
 limit $resultCount";
 
-            //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 3");// 5 ms
 
             _context.Cmd.Parameters.Clear();
             _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
             _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
             _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
             _context.Cmd.CommandText = string.Format(_context.Cmd.CommandText, $"'{string.Join("','", commentIdsLst)}'");
-
-            //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 4");// 4 ms
 
             var res = new List<Score>();
 
@@ -214,7 +204,7 @@ limit $resultCount";
 
             await using var reader = await _context.Cmd.ExecuteReaderAsync();
 
-            while (reader.Read())
+            while (await reader.ReadAsync())
             {
                 res.Add(new Score()
                 {
@@ -225,8 +215,6 @@ limit $resultCount";
                     myScore = reader.SafeGetInt32("myScore", 0)
                 });
             }
-
-            //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 5\r\n");//166 ms
 
             return res;
         }
