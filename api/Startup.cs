@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Sockets;
 using System.Threading.Tasks;
-using Catalog.API.Data;
-using Catalog.API.Data.Interfaces;
-using Catalog.API.Repositories;
-using Catalog.API.Repositories.Interfaces;
-using Catalog.API.Settings;
+using api.Repositories;
+using api.Repositories.Interfaces;
+using api.Services;
+using api.Services.Interfaces;
+using api.Settings;
+using DynaCache.Extensions;
+using DynaCache.MemoryCache.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -35,8 +38,7 @@ namespace Catalog.API
 
             #region Configuration Dependencies
 
-            // TODO implement total Cache invalidation  https://stackoverflow.com/questions/34406737/how-to-remove-all-objects-reset-from-imemorycache-in-asp-net-core ?
-            services.AddMemoryCache();
+            services.AddMemoryCacheService();
 
             services.Configure<CatalogDatabaseSettings>(Configuration.GetSection(nameof(CatalogDatabaseSettings)));
 
@@ -49,10 +51,12 @@ namespace Catalog.API
 
             //services.AddSingleton<IProductRepository, ProductRepository>();
             //services.AddSingleton<ICatalogContext, CatalogContext>();
-            
-            services.AddScoped<IProductRepository, ProductRepository>();
+
+            services.AddCacheable<IProductRepository, ProductRepository>(ServiceLifetime.Scoped);
             services.AddScoped<ICatalogContext, CatalogContext>();
-            
+
+            services.AddCacheable<TestCacheableService>(ServiceLifetime.Scoped);
+
             #endregion
 
             #region Swagger Dependencies

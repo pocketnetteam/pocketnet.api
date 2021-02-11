@@ -1,4 +1,4 @@
-﻿namespace Catalog.API.Settings
+﻿namespace api.Settings
 {
     public class CatalogDatabaseSettings : ICatalogDatabaseSettings
     {

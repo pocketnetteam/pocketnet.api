@@ -1,8 +1,7 @@
-﻿using Catalog.API.Entities;
+﻿using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
-using System.Threading.Tasks;
 
-namespace Catalog.API.Data.Interfaces
+namespace api.Services.Interfaces
 {
     public interface ICatalogContext
     {

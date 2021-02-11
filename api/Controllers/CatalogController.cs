@@ -1,17 +1,14 @@
-﻿using api.DTOs;
-using Catalog.API.Entities;
-using Catalog.API.Repositories.Interfaces;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Caching.Memory;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Threading.Tasks;
+using api.DTOs;
+using api.Repositories.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
-namespace Catalog.API.Controllers
+namespace api.Controllers
 {
     [Route("api/v1/[controller]")]
     [ApiController]
@@ -19,13 +16,11 @@ namespace Catalog.API.Controllers
     {
         private readonly IProductRepository _repository;
         private readonly ILogger<CatalogController> _logger;
-        private IMemoryCache _cache;
 
-        public CatalogController(IProductRepository repository, ILogger<CatalogController> logger, IMemoryCache memoryCache)
+        public CatalogController(IProductRepository repository, ILogger<CatalogController> logger)
         {
-            _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _cache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
+            _repository = repository;
+            _logger = logger;
         }
 
         [HttpGet("Getlastcomments")]
@@ -67,31 +62,10 @@ namespace Catalog.API.Controllers
         [HttpGet("Getpagescores")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Score>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync(string tx_ids, string address, string comment_ids, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync([DefaultValue("")]string tx_ids, [DefaultValue("")]string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
         {
-            if (string.IsNullOrEmpty(tx_ids)) { tx_ids = ""; }
-            if (string.IsNullOrEmpty(address)) { address = ""; }
-            if (string.IsNullOrEmpty(comment_ids)) { comment_ids = ""; }
-
-            string key = "Getpagescores" + tx_ids + address + comment_ids + resultCount.ToString();
-
-            //_logger.LogInformation($"GetPageScoresAsync Parameters Start: {tx_ids}, {address}, {comment_ids}");
-
-            IEnumerable<Score> items;
-            if (!_cache.TryGetValue(key, out items))
-            {
-                items = await _repository.GetPageScoresAsync(tx_ids, address, comment_ids, resultCount);
-
-                //_logger.LogInformation($"GetPageScoresAsync write to _cache " + key);
-
-                _cache.Set(key, items, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(1)));
-            }
-            else
-            {
-               // _logger.LogInformation($"GetPageScoresAsync read from _cache " + key);
-            } 
-
-            // _logger.LogInformation($"GetPageScoresAsync Stop");
+            //TODO cache
+            var items = await _repository.GetPageScoresAsync(tx_ids, address, comment_ids, resultCount);
 
             if (items == null)
             {
@@ -101,6 +75,5 @@ namespace Catalog.API.Controllers
 
             return Ok(items);
         }
-
     }
 }

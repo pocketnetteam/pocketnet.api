@@ -1,9 +1,9 @@
-﻿using Catalog.API.Entities;
-using Microsoft.Data.Sqlite;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using api.Models;
+using Microsoft.Data.Sqlite;
 
-namespace Catalog.API.Data
+namespace api.Services
 {
     public class CatalogContextSeed
     {

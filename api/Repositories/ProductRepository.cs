@@ -1,14 +1,14 @@
-﻿using api.DTOs;
-using Catalog.API.Data.Interfaces;
-using Catalog.API.Entities;
-using Catalog.API.Repositories.Interfaces;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
+using api.DTOs;
 using api.Extensions;
+using api.Models;
+using api.Repositories.Interfaces;
+using api.Services.Interfaces;
+using DynaCache.Attributes;
 
-namespace Catalog.API.Repositories
+namespace api.Repositories
 {
     public class ProductRepository : IProductRepository
     {
@@ -19,30 +19,7 @@ namespace Catalog.API.Repositories
             _context = catalogContext ?? throw new ArgumentNullException(nameof(catalogContext));
         }
 
-        public async Task<IEnumerable<Product>> GetProductsAsync()
-        {
-            var res = new List<Product>();
-
-            using (var reader = await _context.CommandExecutor("select Id, Name , Category,  Summary , Description , Price from Products"))
-            {
-                while (reader.Read())
-                {
-                    res.Add(new Product()
-                    {
-                        Id = reader.GetInt32(0),
-                        Name = reader.GetString(1),
-                        Category = reader.GetString(2),
-                        Summary = reader.GetString(3),
-                        Description = reader.GetString(4),
-                        Price = reader.GetInt32(5)
-                    });
-
-                }
-            }
-
-            return res;
-        }
-
+        [CacheableMethod(60)]
         public async Task<IEnumerable<Comment>> GetLastCommentsAsync(string address, string lang, int resultCount = 100)
         {
             if (string.IsNullOrEmpty(lang)) { lang = "en"; }
@@ -111,17 +88,13 @@ limit $resultCount";
             return res;
         }
 
+        [CacheableMethod(60)]
         public async Task<IEnumerable<Comment>> GetCommentsAsync(string postId, string parentId, string address, string commentIds, int resultCount = 100)
         {
             var foo = DateTime.UtcNow;
             var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
-            if (string.IsNullOrEmpty(postId)) { postId = ""; }
-            if (string.IsNullOrEmpty(parentId)) { parentId = ""; }
-            if (string.IsNullOrEmpty(address)) { address = ""; }
-            if (string.IsNullOrEmpty(commentIds)) { commentIds = ""; }
-
-            List<string> comment_idsLst = commentIds.FromJArray();
+            var commentIdsLst = commentIds.FromJArray();
 
             _context.Cmd.Parameters.Clear();
 
@@ -148,7 +121,7 @@ where
 order by c.time asc
 limit $resultCount";
 
-            if (comment_idsLst.Count == 0)
+            if (commentIdsLst.Count == 0)
             {
                 _context.Cmd.CommandText = _context.Cmd.CommandText.Replace("$WHERE$", @"c.postId = $postId and c.parentId = $parentId and");
 
@@ -158,7 +131,7 @@ limit $resultCount";
             else
             {
                 _context.Cmd.CommandText = _context.Cmd.CommandText.Replace("$WHERE$", @"c.otxid in ({0}) and");
-                _context.Cmd.CommandText = string.Format(_context.Cmd.CommandText, $"'{string.Join("','", comment_idsLst)}'");
+                _context.Cmd.CommandText = string.Format(_context.Cmd.CommandText, $"'{string.Join("','", commentIdsLst)}'");
             }
 
             _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
@@ -167,41 +140,38 @@ limit $resultCount";
 
             var res = new List<Comment>();
 
-            using (var reader = await _context.Cmd.ExecuteReaderAsync())
-            {
-                while (reader.Read())
-                {
-                    res.Add(new Comment()
-                    {
-                        id = reader.SafeGetString("otxid"),
-                        postid = reader.SafeGetString("postId"),
-                        address = reader.SafeGetString("address"),
-                        time = reader.SafeGetInt32("ocmntTime"),
-                        timeUpd = reader.SafeGetInt32("time"),
-                        block = reader.SafeGetInt32("block"),
-                        msg = reader.SafeGetString("msg"),
-                        parentid = reader.SafeGetString("parentId"),
-                        answerid = reader.SafeGetString("answerid"),
-                        scoreUp = reader.SafeGetInt32("scoreUp"),
-                        scoreDown = reader.SafeGetInt32("scoreDown"),
-                        reputation = reader.SafeGetInt32("reputation"),
-                        edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")),
-                        deleted = (reader.SafeGetString("msg") == ""),
-                        myScore = reader.SafeGetInt32("myScore", 0),
-                        children = reader.SafeGetString("children", "0")
-                    });
+            await using var reader = await _context.Cmd.ExecuteReaderAsync();
 
-                }
+            while (await reader.ReadAsync())
+            {
+                res.Add(new Comment()
+                {
+                    id = reader.SafeGetString("otxid"),
+                    postid = reader.SafeGetString("postId"),
+                    address = reader.SafeGetString("address"),
+                    time = reader.SafeGetInt32("ocmntTime"),
+                    timeUpd = reader.SafeGetInt32("time"),
+                    block = reader.SafeGetInt32("block"),
+                    msg = reader.SafeGetString("msg"),
+                    parentid = reader.SafeGetString("parentId"),
+                    answerid = reader.SafeGetString("answerid"),
+                    scoreUp = reader.SafeGetInt32("scoreUp"),
+                    scoreDown = reader.SafeGetInt32("scoreDown"),
+                    reputation = reader.SafeGetInt32("reputation"),
+                    edit = (reader.SafeGetString("txid") != reader.SafeGetString("otxid")),
+                    deleted = (reader.SafeGetString("msg") == ""),
+                    myScore = reader.SafeGetInt32("myScore", 0),
+                    children = reader.SafeGetString("children", "0")
+                });
             }
-            
+
             return res;
         }
 
-
+        [CacheableMethod(60)]
         public async Task<IEnumerable<Score>> GetPageScoresAsync(string txIds, string address, string commentIds, int resultCount = 100)
         {
             //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 1");
-
 
             var txIdsLst = txIds.FromJArray();
             var commentIdsLst = commentIds.FromJArray();
@@ -231,7 +201,7 @@ limit $resultCount";
             _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
             _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
             _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
-            _context.Cmd.CommandText = String.Format(_context.Cmd.CommandText, $"'{string.Join("','", commentIdsLst)}'");
+            _context.Cmd.CommandText = string.Format(_context.Cmd.CommandText, $"'{string.Join("','", commentIdsLst)}'");
 
             //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 4");// 4 ms
 
@@ -242,21 +212,20 @@ limit $resultCount";
             //2. Add postlikers from not private subscribes
             //3. Add postlikers from not subscribes
 
-            using (var reader = await _context.Cmd.ExecuteReaderAsync())
-            {
-                while (reader.Read())
-                {
-                    res.Add(new Score()
-                    {
-                        cmntid = reader.SafeGetString("otxid"),
-                        scoreUp = reader.SafeGetInt32("scoreUp"),
-                        scoreDown = reader.SafeGetInt32("scoreDown"),
-                        reputation = reader.SafeGetInt32("reputation"),
-                        myScore = reader.SafeGetInt32("myScore", 0)
-                    });
+            await using var reader = await _context.Cmd.ExecuteReaderAsync();
 
-                }
+            while (reader.Read())
+            {
+                res.Add(new Score()
+                {
+                    cmntid = reader.SafeGetString("otxid"),
+                    scoreUp = reader.SafeGetInt32("scoreUp"),
+                    scoreDown = reader.SafeGetInt32("scoreDown"),
+                    reputation = reader.SafeGetInt32("reputation"),
+                    myScore = reader.SafeGetInt32("myScore", 0)
+                });
             }
+
             //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 5\r\n");//166 ms
 
             return res;

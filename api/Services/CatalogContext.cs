@@ -1,15 +1,14 @@
-﻿using Catalog.API.Data.Interfaces;
-using Catalog.API.Entities;
-using Catalog.API.Settings;
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Data;
 using System.Threading.Tasks;
+using api.Services.Interfaces;
+using api.Settings;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
-namespace Catalog.API.Data
+namespace api.Services
 {
-    public class CatalogContext : ICatalogContext, IDisposable
+    public class CatalogContext : ICatalogContext, IAsyncDisposable
     {
         private readonly ILogger<CatalogContext> _logger;
 
@@ -25,10 +24,12 @@ namespace Catalog.API.Data
             
             // _logger.LogInformation("connection.Open", null);
 
-            Cmd = new SqliteCommand("", Connection);
+            Cmd = new SqliteCommand("", Connection)
+            {
+                CommandText = @"PRAGMA journal_mode = 'wal'"
+            };
 
             // Enable write-ahead logging
-            Cmd.CommandText =   @"PRAGMA journal_mode = 'wal'";
             Cmd.ExecuteNonQuery();
 
             //CatalogContextSeed.SeedData(Cmd);
@@ -52,11 +53,12 @@ namespace Catalog.API.Data
             await Cmd.ExecuteNonQueryAsync();
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            //     _logger.LogInformation("connection.Close", null);
-
-            if (Connection != null && Connection.State == ConnectionState.Open) Connection.Close();
+            if (Connection != null && Connection.State == ConnectionState.Open)
+            {
+                await Connection.CloseAsync();
+            }
         }
     }
 }
