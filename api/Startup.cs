@@ -1,22 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Sockets;
-using System.Threading.Tasks;
 using api.Repositories;
 using api.Repositories.Interfaces;
 using api.Services;
-using api.Services.Interfaces;
 using api.Settings;
 using DynaCache.Extensions;
 using DynaCache.MemoryCache.Extensions;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 
@@ -50,7 +42,7 @@ namespace Catalog.API
             #region Project Dependencies
 
             services.AddCacheable<IProductRepository, ProductRepository>(ServiceLifetime.Scoped);
-            services.AddScoped<ICatalogContext, CatalogContext>();
+            services.AddScoped<CatalogContext>();
 
             services.AddCacheable<TestCacheableService>(ServiceLifetime.Scoped);
 

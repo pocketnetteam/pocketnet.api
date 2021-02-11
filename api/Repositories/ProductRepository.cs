@@ -3,18 +3,18 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using api.DTOs;
 using api.Extensions;
-using api.Models;
 using api.Repositories.Interfaces;
-using api.Services.Interfaces;
+using api.Services;
 using DynaCache.Attributes;
+using Microsoft.Data.Sqlite;
 
 namespace api.Repositories
 {
     public class ProductRepository : IProductRepository
     {
-        private readonly ICatalogContext _context;
+        private readonly CatalogContext _context;
 
-        public ProductRepository(ICatalogContext catalogContext)
+        public ProductRepository(CatalogContext catalogContext)
         {
             _context = catalogContext ?? throw new ArgumentNullException(nameof(catalogContext));
         }
@@ -25,7 +25,7 @@ namespace api.Repositories
             var foo = DateTime.UtcNow;
             var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
-            _context.Cmd.CommandText = @"select 
+            var commandText = @"select 
 c.txid,
 c.otxid,
 c.postId,
@@ -48,16 +48,17 @@ where
       c.last=1
 order by c.time asc
 limit $resultCount";
+            
+            var command = new SqliteCommand(commandText, _context.Connection);
 
-            _context.Cmd.Parameters.Clear();
-            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-            _context.Cmd.Parameters.AddWithValue("$lang", lang).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-            _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
-            _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$lang", lang).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = SqliteType.Integer;
+            command.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = SqliteType.Integer;
 
             var res = new List<Comment>();
 
-            await using var reader = await _context.Cmd.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 res.Add(new Comment()
@@ -93,9 +94,11 @@ limit $resultCount";
 
             var commentIdsLst = commentIds.FromJArray();
 
-            _context.Cmd.Parameters.Clear();
+            var where = commentIdsLst.Count == 0
+                ? @"c.postId = $postId and c.parentId = $parentId and"
+                : $@"c.otxid in ('{string.Join("','", commentIdsLst)}') and";
 
-            _context.Cmd.CommandText = @"select c.txid,
+            var commandText = $@"select c.txid,
 c.otxid,
 c.postId,
 c.address,
@@ -112,32 +115,27 @@ c.reputation
        ,(select count(*) from Comment ci where ci.parentId=c.otxid and ci.last=1)children
 from Comment c
 where
-      $WHERE$
+      {where}
       c.time<=$unixTime and
       c.last=1
 order by c.time asc
 limit $resultCount";
 
+            var command = new SqliteCommand(commandText, _context.Connection);
+
             if (commentIdsLst.Count == 0)
             {
-                _context.Cmd.CommandText = _context.Cmd.CommandText.Replace("$WHERE$", @"c.postId = $postId and c.parentId = $parentId and");
-
-                _context.Cmd.Parameters.AddWithValue("$postId", postId).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-                _context.Cmd.Parameters.AddWithValue("$parentId", parentId).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-            }
-            else
-            {
-                _context.Cmd.CommandText = _context.Cmd.CommandText.Replace("$WHERE$", @"c.otxid in ({0}) and");
-                _context.Cmd.CommandText = string.Format(_context.Cmd.CommandText, $"'{string.Join("','", commentIdsLst)}'");
+                command.Parameters.AddWithValue("$postId", postId).SqliteType = SqliteType.Text;
+                command.Parameters.AddWithValue("$parentId", parentId).SqliteType = SqliteType.Text;
             }
 
-            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-            _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
-            _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
+            command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = SqliteType.Integer;
+            command.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = SqliteType.Integer;
 
             var res = new List<Comment>();
 
-            await using var reader = await _context.Cmd.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
@@ -165,7 +163,7 @@ limit $resultCount";
             return res;
         }
 
-        //[CacheableMethod(60)]
+        [CacheableMethod(60)]
         public virtual async Task<IEnumerable<Score>> GetPageScoresAsync(string txIds, string address, string commentIds, int resultCount = 100)
         {
             var txIdsLst = txIds.FromJArray();
@@ -174,26 +172,25 @@ limit $resultCount";
             var foo = DateTime.UtcNow;
             var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
-            _context.Cmd.CommandText = @"select c.txid,
+            var commandText = $@"select c.txid,
 c.otxid,
 c.scoreUp,
 c.scoreDown,
 c.reputation
        ,(select cs.value from CommentScores cs where cs.commentid = c.otxid and cs.address = $address order by cs.time desc limit 1)myScore
-    from Comment c
+    from Comment c INDEXED BY Comment_otxid_last_time_index
 where
-      c.otxid in ({0}) and
+      c.otxid in ('{string.Join("','", commentIdsLst)}') and
       c.time <= $unixTime and
       c.last = 1
 order by c.time asc
 limit $resultCount";
 
+            var command = new SqliteCommand(commandText, _context.Connection);
 
-            _context.Cmd.Parameters.Clear();
-            _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-            _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
-            _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
-            _context.Cmd.CommandText = string.Format(_context.Cmd.CommandText, $"'{string.Join("','", commentIdsLst)}'");
+            command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = SqliteType.Integer;
+            command.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = SqliteType.Integer;
 
             var res = new List<Score>();
 
@@ -202,7 +199,7 @@ limit $resultCount";
             //2. Add postlikers from not private subscribes
             //3. Add postlikers from not subscribes
 
-            await using var reader = await _context.Cmd.ExecuteReaderAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
             {
