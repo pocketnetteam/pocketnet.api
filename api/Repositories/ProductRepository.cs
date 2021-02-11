@@ -20,7 +20,7 @@ namespace api.Repositories
         }
 
         [CacheableMethod(60)]
-        public async Task<IEnumerable<Comment>> GetLastCommentsAsync(string address, string lang, int resultCount = 100)
+        public virtual async Task<IEnumerable<Comment>> GetLastCommentsAsync(string address, string lang, int resultCount = 100)
         {
             var foo = DateTime.UtcNow;
             var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
@@ -86,7 +86,7 @@ limit $resultCount";
         }
 
         [CacheableMethod(60)]
-        public async Task<IEnumerable<Comment>> GetCommentsAsync(string postId, string parentId, string address, string commentIds, int resultCount = 100)
+        public virtual async Task<IEnumerable<Comment>> GetCommentsAsync(string postId, string parentId, string address, string commentIds, int resultCount = 100)
         {
             var foo = DateTime.UtcNow;
             var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
@@ -165,8 +165,8 @@ limit $resultCount";
             return res;
         }
 
-        [CacheableMethod(60)]
-        public async Task<IEnumerable<Score>> GetPageScoresAsync(string txIds, string address, string commentIds, int resultCount = 100)
+        //[CacheableMethod(60)]
+        public virtual async Task<IEnumerable<Score>> GetPageScoresAsync(string txIds, string address, string commentIds, int resultCount = 100)
         {
             var txIdsLst = txIds.FromJArray();
             var commentIdsLst = commentIds.FromJArray();
