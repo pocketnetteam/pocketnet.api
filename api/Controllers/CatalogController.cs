@@ -31,11 +31,11 @@ namespace Catalog.API.Controllers
         [HttpGet("Getlastcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Comment>>> GetlastcommentsAsync([Required, MaxLength(34)] string address, string lang, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Comment>>> GetLastCommentsAsync([Required, MaxLength(34)] string address, string lang, [DefaultValue(100)] int resultCount)
         {
-            _logger.LogInformation($"GetlastcommentsAsync Parameters: {address}, {lang}, {resultCount}");
+            _logger.LogInformation($"GetLastCommentsAsync Parameters: {address}, {lang}, {resultCount}");
 
-            var items = await _repository.GetlastcommentsAsync(address, lang, resultCount);
+            var items = await _repository.GetLastCommentsAsync(address, lang, resultCount);
 
             if (items == null)
             {
@@ -49,11 +49,11 @@ namespace Catalog.API.Controllers
         [HttpGet("Getcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Comment>>> GetcommentsAsync(string postid, string parentid, string address, string comment_ids, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Comment>>> GetCommentsAsync(string postid, string parentid, string address, string comment_ids, [DefaultValue(100)] int resultCount)
         {
-           // _logger.LogInformation($"GetcommentsAsync Parameters: {postid}, {parentid}, {address}");
+           // _logger.LogInformation($"GetCommentsAsync Parameters: {postid}, {parentid}, {address}");
 
-            var items = await _repository.GetcommentsAsync(postid, parentid, address, comment_ids, resultCount);
+            var items = await _repository.GetCommentsAsync(postid, parentid, address, comment_ids, resultCount);
 
             if (items == null)
             {
@@ -63,10 +63,11 @@ namespace Catalog.API.Controllers
 
             return Ok(items);
         }
+
         [HttpGet("Getpagescores")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Score>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Score>>> GetpagescoresAsync(string tx_ids, string address, string comment_ids, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync(string tx_ids, string address, string comment_ids, [DefaultValue(100)] int resultCount)
         {
             if (string.IsNullOrEmpty(tx_ids)) { tx_ids = ""; }
             if (string.IsNullOrEmpty(address)) { address = ""; }
@@ -74,27 +75,27 @@ namespace Catalog.API.Controllers
 
             string key = "Getpagescores" + tx_ids + address + comment_ids + resultCount.ToString();
 
-            //_logger.LogInformation($"GetpagescoresAsync Parameters Start: {tx_ids}, {address}, {comment_ids}");
+            //_logger.LogInformation($"GetPageScoresAsync Parameters Start: {tx_ids}, {address}, {comment_ids}");
 
             IEnumerable<Score> items;
             if (!_cache.TryGetValue(key, out items))
             {
-                items = await _repository.GetpagescoresAsync(tx_ids, address, comment_ids, resultCount);
+                items = await _repository.GetPageScoresAsync(tx_ids, address, comment_ids, resultCount);
 
-                //_logger.LogInformation($"GetpagescoresAsync write to _cache " + key);
+                //_logger.LogInformation($"GetPageScoresAsync write to _cache " + key);
 
                 _cache.Set(key, items, new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromMinutes(1)));
             }
             else
             {
-               // _logger.LogInformation($"GetpagescoresAsync read from _cache " + key);
-            }
+               // _logger.LogInformation($"GetPageScoresAsync read from _cache " + key);
+            } 
 
-           // _logger.LogInformation($"GetpagescoresAsync Stop");
+            // _logger.LogInformation($"GetPageScoresAsync Stop");
 
             if (items == null)
             {
-                _logger.LogError($"GetpagescoresAsync No records: {tx_ids}, {address}, {comment_ids}");
+                _logger.LogError($"GetPageScoresAsync No records: {tx_ids}, {address}, {comment_ids}");
                 return NotFound();
             }
 

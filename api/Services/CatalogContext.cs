@@ -13,6 +13,9 @@ namespace Catalog.API.Data
     {
         private readonly ILogger<CatalogContext> _logger;
 
+        public SqliteCommand Cmd { get; }
+        public SqliteConnection Connection { get; }
+
         public CatalogContext(ICatalogDatabaseSettings settings, ILogger<CatalogContext> logger)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -31,33 +34,29 @@ namespace Catalog.API.Data
             //CatalogContextSeed.SeedData(Cmd);
         }
 
-        public void Dispose()
+        public async Task<SqliteDataReader> CommandExecutor(string sql)
         {
-       //     _logger.LogInformation("connection.Close", null);
-
-            if (Connection != null && Connection.State == System.Data.ConnectionState.Open) Connection.Close();
-        }
-
-        public async Task<SqliteDataReader> CommandExecutor(string SQL)
-        {
-            Cmd.CommandText = SQL;  
+            Cmd.CommandText = sql;  
             return await Cmd.ExecuteReaderAsync();
         }
-        public async Task<object> CommandExecutorScalar(string SQL)
+
+        public async Task<object> CommandExecutorScalar(string sql)
         {
-            Cmd.CommandText = SQL;
+            Cmd.CommandText = sql;
             return await Cmd.ExecuteScalarAsync();
         }
-        public async Task CommandExecutorNonQuery(string SQL)
+
+        public async Task CommandExecutorNonQuery(string sql)
         {
-            Cmd.CommandText = SQL;
+            Cmd.CommandText = sql;
             await Cmd.ExecuteNonQueryAsync();
         }
 
+        public void Dispose()
+        {
+            //     _logger.LogInformation("connection.Close", null);
 
-
-        public SqliteCommand Cmd { get; }
-        public SqliteConnection Connection { get; }
-
+            if (Connection != null && Connection.State == ConnectionState.Open) Connection.Close();
+        }
     }
 }

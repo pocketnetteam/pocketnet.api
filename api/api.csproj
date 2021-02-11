@@ -19,5 +19,14 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="DynaCache.Core, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\staticpackages\DynaCache.Core.MemoryCache\DynaCache.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="DynaCache.Core.MemoryCache, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null">
+      <HintPath>..\staticpackages\DynaCache.Core.MemoryCache\DynaCache.Core.MemoryCache.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 
 </Project>

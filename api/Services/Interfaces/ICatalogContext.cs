@@ -8,8 +8,8 @@ namespace Catalog.API.Data.Interfaces
     {
         SqliteCommand Cmd { get; }
         SqliteConnection Connection { get; }
-        public Task<SqliteDataReader> CommandExecutor(string SQL);
-        public Task<object> CommandExecutorScalar(string SQL);
-        public Task CommandExecutorNonQuery(string SQL);
+        public Task<SqliteDataReader> CommandExecutor(string sql);
+        public Task<object> CommandExecutorScalar(string sql);
+        public Task CommandExecutorNonQuery(string sql);
     }
 }

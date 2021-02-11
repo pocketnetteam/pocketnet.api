@@ -1,5 +1,4 @@
 ﻿using api.DTOs;
-using api.Repositories;
 using Catalog.API.Data.Interfaces;
 using Catalog.API.Entities;
 using Catalog.API.Repositories.Interfaces;
@@ -7,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using api.Extensions;
 
 namespace Catalog.API.Repositories
 {
@@ -21,7 +21,7 @@ namespace Catalog.API.Repositories
 
         public async Task<IEnumerable<Product>> GetProductsAsync()
         {
-            List<Product> res = new List<Product>();
+            var res = new List<Product>();
 
             using (var reader = await _context.CommandExecutor("select Id, Name , Category,  Summary , Description , Price from Products"))
             {
@@ -43,22 +43,22 @@ namespace Catalog.API.Repositories
             return res;
         }
 
-        public async Task<IEnumerable<Comment>> GetlastcommentsAsync(string address, string lang, int resultCount = 100)
+        public async Task<IEnumerable<Comment>> GetLastCommentsAsync(string address, string lang, int resultCount = 100)
         {
             if (string.IsNullOrEmpty(lang)) { lang = "en"; }
 
-            DateTime foo = DateTime.UtcNow;
-            long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
+            var foo = DateTime.UtcNow;
+            var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
             _context.Cmd.CommandText = @"select 
 c.txid,
 c.otxid,
-c.postid,
+c.postId,
 c.address,
 c.time,
 c.block,
 c.msg,
-c.parentid,
+c.parentId,
 c.answerid,
 c.scoreUp,
 c.scoreDown,
@@ -67,7 +67,7 @@ c.reputation
        ,(select cs.value from CommentScores cs where cs.commentid=c.otxid and cs.address=$address order by cs.time desc limit 1)myScore
        from Comment c, Posts p
 where
-      p.txid=c.postid and
+      p.txid=c.postId and
       p.lang=$lang and
       c.time<=$unixTime and
       c.last=1
@@ -80,7 +80,7 @@ limit $resultCount";
             _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
             _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
 
-            List<Comment> res = new List<Comment>();
+            var res = new List<Comment>();
 
             using (var reader = await _context.Cmd.ExecuteReaderAsync())
             {
@@ -89,13 +89,13 @@ limit $resultCount";
                     res.Add(new Comment()
                     {
                         id = reader.SafeGetString("otxid"),
-                        postid = reader.SafeGetString("postid"),
+                        postid = reader.SafeGetString("postId"),
                         address = reader.SafeGetString("address"),
                         time = reader.SafeGetInt32("ocmntTime"),
                         timeUpd = reader.SafeGetInt32("time"),
                         block = reader.SafeGetInt32("block"),
                         msg = reader.SafeGetString("msg"),
-                        parentid = reader.SafeGetString("parentid"),
+                        parentid = reader.SafeGetString("parentId"),
                         answerid = reader.SafeGetString("answerid"),
                         scoreUp = reader.SafeGetInt32("scoreUp"),
                         scoreDown = reader.SafeGetInt32("scoreDown"),
@@ -111,35 +111,35 @@ limit $resultCount";
             return res;
         }
 
-        public async Task<IEnumerable<Comment>> GetcommentsAsync(string postid, string parentid, string address, string comment_ids, int resultCount = 100)
+        public async Task<IEnumerable<Comment>> GetCommentsAsync(string postId, string parentId, string address, string commentIds, int resultCount = 100)
         {
-            DateTime foo = DateTime.UtcNow;
-            long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
+            var foo = DateTime.UtcNow;
+            var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
-            if (string.IsNullOrEmpty(postid)) { postid = ""; }
-            if (string.IsNullOrEmpty(parentid)) { parentid = ""; }
+            if (string.IsNullOrEmpty(postId)) { postId = ""; }
+            if (string.IsNullOrEmpty(parentId)) { parentId = ""; }
             if (string.IsNullOrEmpty(address)) { address = ""; }
-            if (string.IsNullOrEmpty(comment_ids)) { comment_ids = ""; }
+            if (string.IsNullOrEmpty(commentIds)) { commentIds = ""; }
 
-            List<string> comment_idsLst = comment_ids.FromJArray();
+            List<string> comment_idsLst = commentIds.FromJArray();
 
             _context.Cmd.Parameters.Clear();
 
             _context.Cmd.CommandText = @"select c.txid,
 c.otxid,
-c.postid,
+c.postId,
 c.address,
 c.time,
 c.block,
 c.msg,
-c.parentid,
+c.parentId,
 c.answerid,
 c.scoreUp,
 c.scoreDown,
 c.reputation
        ,(select ci.time from Comment ci where ci.txid=c.otxid order by ci.time desc limit 1)ocmntTime
        ,(select cs.value from CommentScores cs where cs.commentid=c.otxid and cs.address=$address order by cs.time desc limit 1)myScore
-       ,(select count(*) from Comment ci where ci.parentid=c.otxid and ci.last=1)children
+       ,(select count(*) from Comment ci where ci.parentId=c.otxid and ci.last=1)children
 from Comment c
 where
       $WHERE$
@@ -150,23 +150,23 @@ limit $resultCount";
 
             if (comment_idsLst.Count == 0)
             {
-                _context.Cmd.CommandText = _context.Cmd.CommandText.Replace("$WHERE$", @"c.postid = $postid and c.parentid = $parentid and");
+                _context.Cmd.CommandText = _context.Cmd.CommandText.Replace("$WHERE$", @"c.postId = $postId and c.parentId = $parentId and");
 
-                _context.Cmd.Parameters.AddWithValue("$postid", postid).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
-                _context.Cmd.Parameters.AddWithValue("$parentid", parentid).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+                _context.Cmd.Parameters.AddWithValue("$postId", postId).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
+                _context.Cmd.Parameters.AddWithValue("$parentId", parentId).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
             }
             else
             {
                 _context.Cmd.CommandText = _context.Cmd.CommandText.Replace("$WHERE$", @"c.otxid in ({0}) and");
-                _context.Cmd.CommandText = String.Format(_context.Cmd.CommandText, $"'{string.Join("','", comment_idsLst)}'");
+                _context.Cmd.CommandText = string.Format(_context.Cmd.CommandText, $"'{string.Join("','", comment_idsLst)}'");
             }
 
             _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
             _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
             _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
 
-            List<Comment> res = new List<Comment>();
-            
+            var res = new List<Comment>();
+
             using (var reader = await _context.Cmd.ExecuteReaderAsync())
             {
                 while (reader.Read())
@@ -174,13 +174,13 @@ limit $resultCount";
                     res.Add(new Comment()
                     {
                         id = reader.SafeGetString("otxid"),
-                        postid = reader.SafeGetString("postid"),
+                        postid = reader.SafeGetString("postId"),
                         address = reader.SafeGetString("address"),
                         time = reader.SafeGetInt32("ocmntTime"),
                         timeUpd = reader.SafeGetInt32("time"),
                         block = reader.SafeGetInt32("block"),
                         msg = reader.SafeGetString("msg"),
-                        parentid = reader.SafeGetString("parentid"),
+                        parentid = reader.SafeGetString("parentId"),
                         answerid = reader.SafeGetString("answerid"),
                         scoreUp = reader.SafeGetInt32("scoreUp"),
                         scoreDown = reader.SafeGetInt32("scoreDown"),
@@ -198,18 +198,18 @@ limit $resultCount";
         }
 
 
-        public async Task<IEnumerable<Score>> GetpagescoresAsync(string tx_ids, string address, string comment_ids, int resultCount = 100)
+        public async Task<IEnumerable<Score>> GetPageScoresAsync(string txIds, string address, string commentIds, int resultCount = 100)
         {
             //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 1");
 
 
-            List<string> tx_idsLst = tx_ids.FromJArray();
-            List<string> comment_idsLst = comment_ids.FromJArray();
+            var txIdsLst = txIds.FromJArray();
+            var commentIdsLst = commentIds.FromJArray();
 
             //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 2");// 4 ms
 
-            DateTime foo = DateTime.UtcNow;
-            long unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
+            var foo = DateTime.UtcNow;
+            var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds();
 
             _context.Cmd.CommandText = @"select c.txid,
 c.otxid,
@@ -231,18 +231,16 @@ limit $resultCount";
             _context.Cmd.Parameters.AddWithValue("$address", address).SqliteType = Microsoft.Data.Sqlite.SqliteType.Text;
             _context.Cmd.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
             _context.Cmd.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = Microsoft.Data.Sqlite.SqliteType.Integer;
-            _context.Cmd.CommandText = String.Format(_context.Cmd.CommandText, $"'{string.Join("','", comment_idsLst)}'");
+            _context.Cmd.CommandText = String.Format(_context.Cmd.CommandText, $"'{string.Join("','", commentIdsLst)}'");
 
             //File.AppendAllText(@"D:\Work\iNET\pocketnet.api\api\bin\Debug\time", $"\r\n{DateTime.Now.Minute}:{DateTime.Now.Second}:{DateTime.Now.Millisecond}: 4");// 4 ms
 
-            List<Score> res = new List<Score>();
+            var res = new List<Score>();
 
             // TODO
             //1. Add postlikers from private subscribes
             //2. Add postlikers from not private subscribes
             //3. Add postlikers from not subscribes
-
-
 
             using (var reader = await _context.Cmd.ExecuteReaderAsync())
             {
@@ -263,6 +261,5 @@ limit $resultCount";
 
             return res;
         }
-     
     }
 }

@@ -8,9 +8,8 @@ namespace Catalog.API.Repositories.Interfaces
     public interface IProductRepository
     {
         Task<IEnumerable<Product>> GetProductsAsync();
-        Task<IEnumerable<Comment>> GetcommentsAsync(string postid, string parentid, string address, string comment_ids, int resultCount = 100);
-        Task<IEnumerable<Comment>> GetlastcommentsAsync(string address, string lang, int resultCount = 100);
-        Task<IEnumerable<Score>> GetpagescoresAsync(string tx_ids, string address, string comment_ids, int resultCount = 100);
-
+        Task<IEnumerable<Comment>> GetCommentsAsync(string postId, string parentId, string address, string commentIds, int resultCount = 100);
+        Task<IEnumerable<Comment>> GetLastCommentsAsync(string address, string lang, int resultCount = 100);
+        Task<IEnumerable<Score>> GetPageScoresAsync(string txIds, string address, string commentIds, int resultCount = 100);
     }
 }
