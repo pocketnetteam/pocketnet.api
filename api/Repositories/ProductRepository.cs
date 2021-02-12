@@ -178,7 +178,7 @@ c.scoreUp,
 c.scoreDown,
 c.reputation
        ,(select cs.value from CommentScores cs where cs.commentid = c.otxid and cs.address = $address order by cs.time desc limit 1)myScore
-    from Comment c INDEXED BY Comment_otxid_last_time_index
+    from Comment c --INDEXED BY Comment_otxid_last_time_index
 where
       c.otxid in ('{string.Join("','", commentIdsLst)}') and
       c.time <= $unixTime and
