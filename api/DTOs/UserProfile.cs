@@ -10,7 +10,6 @@ namespace api.DTOs
         public string address { get; set; }
         public string name { get; set; }
         public int id { get; set; }
-
         public string i { get; set; }
         public string b { get; set; }
         public string r { get; set; }

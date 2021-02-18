@@ -20,6 +20,17 @@ namespace api.Repositories
         }
 
         [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(string addresses, int shortForm = 1, int option = 0)
+        {
+            var addressLst = addresses.FromJArray();
+
+            var res = new List<UserProfile>();
+
+
+            return res;
+        }
+
+        [CacheableMethod(60)]
         public virtual async Task<IEnumerable<Comment>> GetLastCommentsAsync(string address, string lang, int resultCount = 100)
         {
             var foo = DateTime.UtcNow;

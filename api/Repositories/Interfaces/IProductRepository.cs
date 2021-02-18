@@ -9,5 +9,6 @@ namespace api.Repositories.Interfaces
         Task<IEnumerable<Comment>> GetCommentsAsync(string postId, string parentId, string address, string commentIds, int resultCount = 100);
         Task<IEnumerable<Comment>> GetLastCommentsAsync(string address, string lang, int resultCount = 100);
         Task<IEnumerable<Score>> GetPageScoresAsync(string txIds, string address, string commentIds, int resultCount = 100);
+        Task<IEnumerable<UserProfile>> GetUserProfileAsync(string addresses, int shortForm = 1, int option = 0);
     }
 }
