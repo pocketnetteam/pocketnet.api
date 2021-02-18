@@ -20,11 +20,97 @@ namespace api.Repositories
         }
 
         [CacheableMethod(60)]
-        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(string addresses, int shortForm = 1, int option = 0)
+        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(string addresses, bool shortForm = true, int option = 0)
         {
             var addressLst = addresses.FromJArray();
 
+            // In full form add other fields
+            // Subscribes
+            // Subscribers TODO limited by 500 - we r not going to fetch all 10mln
+            // Blockings
+
+            // TODO typo in subscribes - "adddress"
+            // TODO for private in subscribes - SQLite does not have a separate Boolean storage class. Instead, Boolean values are stored as integers 0 (false) and 1 (true).
+
+            var longForm = shortForm  ? "" : @"
+     ,regdate
+     ,lang
+     ,url
+     ,time
+     ,pubkey
+
+     ,(SELECT json_group_array(json_object( 'adddress', address_to, 'private', private )) AS json_result
+     FROM (select address_to,private from SubscribesView sv where sv.address =uw.address))subscribes
+
+     ,(SELECT json_group_array(address) AS json_result
+     FROM (select address from SubscribesView sv where sv.address_to =uw.address limit 500))subscribers
+
+     ,(SELECT json_group_array(address_to) AS json_result
+     FROM (select address_to from BlockingView bv where bv.address =bv.address))blocking";
+
+
+            // Minimal fields for short form
+            var commandText = $@"select address
+     ,id
+     ,name
+     ,avatar
+     ,donations
+     ,referrer
+     ,reputation/10 as reputation
+     ,about
+     ,(select count(*)  from Posts p where p.address=uw.address ) postcnt
+     ,(select count(*)  from UsersView uw2 where uw2.referrer=uw.address ) referrals_count
+
+     {longForm}
+
+from UsersView uw where address in ('{string.Join("','", addressLst)}')";
+
+
+            // Recommendations subscribtions
+            // TODO now commented out
+
             var res = new List<UserProfile>();
+
+            var command = new SqliteCommand(commandText, _context.Connection);
+            
+            await using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                UserProfile up = new UserProfile()
+                {
+                    address = reader.SafeGetString("address"),
+                    name = reader.SafeGetString("name"),
+                    id = reader.SafeGetInt32("id"),
+                    i = reader.SafeGetString("avatar"),
+                    b = reader.SafeGetString("donations"),
+                    r = reader.SafeGetString("referrer"),
+                    reputation = reader.SafeGetInt32("reputation"),
+                    postcnt = reader.SafeGetInt32("postcnt"),
+                    rc = reader.SafeGetInt32("referrals_count"),
+                };
+
+
+                if (option == 1)
+                {
+                    up.a = reader.SafeGetString("about");
+                }
+
+                if (!shortForm)
+                {
+                    up.regdate = reader.SafeGetInt32("regdate");
+                    up.l = reader.SafeGetString("lang");
+                    up.s = reader.SafeGetString("url");
+                    up.update = reader.SafeGetInt32("time");
+                    up.k = reader.SafeGetString("pubkey");
+
+                    up.subscribes = Newtonsoft.Json.JsonConvert.DeserializeObject<Subscription[]>(reader.SafeGetString("subscribes"));
+                    up.subscribers = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("subscribers"));
+                    up.blocking = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("blocking"));
+                }
+
+                res.Add(up);
+            }
 
 
             return res;

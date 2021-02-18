@@ -16,18 +16,16 @@ namespace api.DTOs
         public int reputation { get; set; }
         public int postcnt { get; set; }
         public int rc { get; set; }
+        public string? a { get; set; }
+        public int? regdate { get; set; }
+        public string? l { get; set; }
+        public string? s { get; set; }
+        public int? update { get; set; }
+        public string? k { get; set; }
+        public Subscription[]? subscribes { get; set; }
+        public string[]? subscribers { get; set; }
+        public string[]? blocking { get; set; }
 
-        /*
-        entry.pushKV("address", _address);
-        entry.pushKV("name", itm["name"].As<string>());
-        entry.pushKV("id", itm["id"].As<int>() + 1);
-        entry.pushKV("i", itm["avatar"].As<string>());
-        entry.pushKV("b", itm["donations"].As<string>());
-        entry.pushKV("r", itm["referrer"].As<string>());
-        entry.pushKV("reputation", itm["reputation"].As<int>() / 10.0);
 
-        if (_posts_cnt.find(_address) != _posts_cnt.end()) {
-            entry.pushKV("postcnt", _posts_cnt[_address]);
-        }*/
     }
 }

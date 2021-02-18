@@ -74,5 +74,20 @@ namespace api.Controllers
 
             return Ok(items);
         }
+        [HttpGet("Getuserprofile")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<UserProfile>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<UserProfile>>> GetUserProfileAsync([DefaultValue("")] string addresses, [DefaultValue(true)] bool shortForm, [DefaultValue(0)] int option)
+        {
+            var items = await _repository.GetUserProfileAsync(addresses,shortForm, option);
+
+            if (items == null)
+            {
+                _logger.LogError($"GetUserProfileAsync No records: {addresses}, {shortForm}, {option}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
     }
 }
