@@ -28,6 +28,8 @@ namespace Catalog.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            Cacheable.AddCustomConverter<IReadOnlyCollection<string>>(n => string.Join(",", n));
+
             services.AddControllers();
 
             #region Configuration Dependencies
@@ -42,8 +44,6 @@ namespace Catalog.API
             #endregion
 
             #region Project Dependencies
-
-            Cacheable.AddCustomConverter<List<string>>(n => string.Join(",", n));
 
             services.AddCacheable<IProductRepository, ProductRepository>(ServiceLifetime.Scoped);
             services.AddScoped<CatalogContext>();

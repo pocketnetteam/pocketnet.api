@@ -27,8 +27,8 @@ namespace api.Repositories
             return await GetUserProfileAsync(addressLst, shortForm, option);
         }
 
-        //[CacheableMethod(60)]
-        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(List<string> addresses, bool shortForm = true, int option = 0)
+        [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(IReadOnlyCollection<string> addresses, bool shortForm = true, int option = 0)
         {
 
             // In full form add other fields
