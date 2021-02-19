@@ -319,6 +319,7 @@ limit $resultCount";
             return res;
         }
 
+        [CacheableMethod(60)]
         public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(string txIds, string address)
         {
             var res = new List<PostData>();

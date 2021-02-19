@@ -95,8 +95,6 @@ namespace api.Controllers
         [ProducesResponseType(typeof(IEnumerable<PostData>), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<PostData>>> GetRawTransactionWithMessageByIdAsync([DefaultValue("")] string txIds, [DefaultValue(""), MaxLength(34)] string address)
         {
-            _logger.LogInformation($"GetRawTransactionWithMessageById Parameters: {txIds}");
-
             var items = await _repository.GetRawTransactionWithMessageByIdAsync(txIds, address);
 
             if (items == null)
