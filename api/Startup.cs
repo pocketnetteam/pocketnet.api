@@ -2,6 +2,7 @@ using api.Repositories;
 using api.Repositories.Interfaces;
 using api.Services;
 using api.Settings;
+using DynaCache;
 using DynaCache.Extensions;
 using DynaCache.MemoryCache.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -11,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
+using System.Collections.Generic;
 
 namespace Catalog.API
 {
@@ -40,6 +42,8 @@ namespace Catalog.API
             #endregion
 
             #region Project Dependencies
+
+            Cacheable.AddCustomConverter<List<string>>(n => string.Join(",", n));
 
             services.AddCacheable<IProductRepository, ProductRepository>(ServiceLifetime.Scoped);
             services.AddScoped<CatalogContext>();

@@ -22,21 +22,6 @@
         public int comments { get; set; }
         public Comment lastComment { get; set; }
         public int reposted { get; set; }
-        public UserProfile userprofile { get; set; }
+        public UserProfile? userprofile { get; set; }
     }
-
-    /*   
-    entry.pushKV("txid", itm["txid"].As<string>());
-    if (itm["txidEdit"].As<string>() != "") entry.pushKV("edit", "true");
-    if (itm["txidRepost"].As<string>() != "") entry.pushKV("repost", itm["txidRepost"].As<string>());
-    entry.pushKV("address", itm["address"].As<string>());
-    entry.pushKV("time", itm["time"].As<string>());
-    entry.pushKV("l", itm["lang"].As<string>());
-    entry.pushKV("c", itm["caption"].As<string>());
-    entry.pushKV("m", itm["message"].As<string>());
-    entry.pushKV("u", itm["url"].As<string>());
-
-    entry.pushKV("scoreSum", itm["scoreSum"].As<string>());
-    entry.pushKV("scoreCnt", itm["scoreCnt"].As<string>());
-*/
 }

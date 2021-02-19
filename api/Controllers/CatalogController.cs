@@ -44,7 +44,7 @@ namespace api.Controllers
         [HttpGet("Getcomments")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Comment>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Comment>>> GetCommentsAsync([DefaultValue("")] string postid, [DefaultValue("")] string parentid, [DefaultValue("")] string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Comment>>> GetCommentsAsync([DefaultValue("")] string postid, [DefaultValue("")] string parentid, [DefaultValue(""), MaxLength(34)] string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
         {
             _logger.LogInformation($"GetCommentsAsync Parameters: {postid}, {parentid}, {address}");
 
@@ -62,7 +62,7 @@ namespace api.Controllers
         [HttpGet("Getpagescores")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Score>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync([DefaultValue("")]string tx_ids, [DefaultValue("")]string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync([DefaultValue("")]string tx_ids, [DefaultValue(""), MaxLength(34)] string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
         {
             var items = await _repository.GetPageScoresAsync(tx_ids, address, comment_ids, resultCount);
 
@@ -89,5 +89,24 @@ namespace api.Controllers
 
             return Ok(items);
         }
+
+        [HttpGet("GetRawTransactionWithMessageById")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<PostData>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<PostData>>> GetRawTransactionWithMessageByIdAsync([DefaultValue("")] string txIds, [DefaultValue(""), MaxLength(34)] string address)
+        {
+            _logger.LogInformation($"GetRawTransactionWithMessageById Parameters: {txIds}");
+
+            var items = await _repository.GetRawTransactionWithMessageByIdAsync(txIds, address);
+
+            if (items == null)
+            {
+                _logger.LogError($"GetRawTransactionWithMessageById No records: {txIds}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
+        
     }
 }

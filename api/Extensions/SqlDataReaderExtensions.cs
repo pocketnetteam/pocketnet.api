@@ -12,6 +12,14 @@ namespace api.Extensions
 				? reader.GetInt32(ordinal) 
 				: defaultValue;
 		}
+		public static bool SafeGetBool(this SqliteDataReader reader, string columnName, bool defaultValue = false)
+		{
+			var ordinal = reader.GetOrdinal(columnName);
+
+			return !reader.IsDBNull(ordinal)
+				? reader.GetBoolean(ordinal)
+				: defaultValue;
+		}
 		public static string SafeGetString(this SqliteDataReader reader, string columnName, string defaultValue ="")
 		{
 			var ordinal = reader.GetOrdinal(columnName);

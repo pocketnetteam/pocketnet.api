@@ -7,6 +7,7 @@ using api.Repositories.Interfaces;
 using api.Services;
 using DynaCache.Attributes;
 using Microsoft.Data.Sqlite;
+using System.Linq;
 
 namespace api.Repositories
 {
@@ -19,10 +20,16 @@ namespace api.Repositories
             _context = catalogContext ?? throw new ArgumentNullException(nameof(catalogContext));
         }
 
-        [CacheableMethod(60)]
         public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(string addresses, bool shortForm = true, int option = 0)
         {
             var addressLst = addresses.FromJArray();
+
+            return await GetUserProfileAsync(addressLst, shortForm, option);
+        }
+
+        //[CacheableMethod(60)]
+        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(List<string> addresses, bool shortForm = true, int option = 0)
+        {
 
             // In full form add other fields
             // Subscribes
@@ -30,7 +37,6 @@ namespace api.Repositories
             // Blockings
 
             // TODO typo in subscribes - "adddress"
-            // TODO for private in subscribes - SQLite does not have a separate Boolean storage class. Instead, Boolean values are stored as integers 0 (false) and 1 (true).
 
             var longForm = shortForm  ? "" : @"
      ,regdate
@@ -63,7 +69,7 @@ namespace api.Repositories
 
      {longForm}
 
-from UsersView uw where address in ('{string.Join("','", addressLst)}')";
+from UsersView uw where address in ('{string.Join("','", addresses)}')";
 
 
             // Recommendations subscribtions
@@ -309,6 +315,98 @@ limit $resultCount";
                     myScore = reader.SafeGetInt32("myScore", 0)
                 });
             }
+
+            return res;
+        }
+
+        public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(string txIds, string address)
+        {
+            var res = new List<PostData>();
+
+            var txIdsLst = txIds.FromJArray();
+
+            var commandText = $@"select
+        txid
+       ,case when txidEdit then 1 else 0 end edit
+       ,case when txidRepost then txidRepost else '' end repost
+       ,address
+       ,time
+       ,lang
+       ,caption
+       ,message
+       ,url
+       ,scoreSum
+       ,scoreCnt
+       ,tags
+       ,images
+       ,settings
+       ,ifnull((select value from Scores s where posttxid=p.txid and s.address=$address),0)myVal
+       ,(select count(*) from Comment c where c.postid =p.txid and c.last=1) comments
+       ,(select count(*) from Posts p2 where p2.txidRepost=p.txid)reposted
+,(SELECT json_object('id', id, 'postid', postid, 'address', address, 'timeUpd', timeUpd ,  'block', block,
+    'msg' ,msg, 'parentid' ,parentid, 'answerid' ,answerid, 'scoreUp' ,scoreUp, 'scoreDown', scoreDown, 'reputation' ,reputation, 'edit' ,edit, 'deleted', deleted, 'time', time, 'myScore', myScore, 'children' ,children) AS json_result
+     FROM (
+     select c.otxid as id
+       ,c.postid
+       ,c.address
+       ,c.time as timeUpd
+       ,c.block
+       ,c.msg
+       ,c.parentid
+       ,c.answerid
+       ,c.scoreUp
+       ,c.scoreDown
+       ,c.reputation
+       ,case when c.txid!=c.otxid then 1 else 0 end edit
+       ,case when c.msg='' then 1 else 0 end deleted
+       ,(select time from Comment c1 where c1.txid= c.otxid limit 1) time
+       ,ifnull((select cs.value from CommentScores cs where c.otxid=cs.commentid  and cs.address=$address limit 1),0) myScore
+       ,(select count(*) from Comment c2 where c2.parentid=c.otxid and last=1)children
+          from Comment c
+          where
+                c.postid =p.txid and
+                parentid='' and
+                c.last=1
+          order by c.time desc limit 1))lastComment
+ from Posts p where txid in ('{string.Join("','", txIdsLst)}');";
+
+            var command = new SqliteCommand(commandText, _context.Connection);
+
+            command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                PostData pd = new PostData()
+                {
+                    txid = reader.SafeGetString("txid"),
+                    txidEdit = reader.SafeGetBool("edit"),
+                    txidRepost = reader.SafeGetString("repost"),
+                    address = reader.SafeGetString("address"),
+                    time = reader.SafeGetInt32("time"),
+                    l = reader.SafeGetString("lang"),
+                    c = reader.SafeGetString("caption"),
+                    m = reader.SafeGetString("message"),
+                    u = reader.SafeGetString("url"),
+                    scoreSum = reader.SafeGetString("scoreSum"),
+                    scoreCnt = reader.SafeGetString("scoreCnt"),
+                    myVal = reader.SafeGetString("myVal"),
+                    comments=reader.SafeGetInt32("comments"), 
+                    reposted = reader.SafeGetInt32("reposted")
+                };
+
+                pd.lastComment = Newtonsoft.Json.JsonConvert.DeserializeObject<Comment>(reader.SafeGetString("lastComment"));
+                pd.s= Newtonsoft.Json.JsonConvert.DeserializeObject<DTOs.Settings>(reader.SafeGetString("settings"));
+                pd.t=Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("tags"));
+                pd.i=Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("images"));
+
+                pd.userprofile = (await GetUserProfileAsync(new List<string> { pd.address } )).FirstOrDefault();
+
+
+                res.Add(pd);
+            }
+
 
             return res;
         }
