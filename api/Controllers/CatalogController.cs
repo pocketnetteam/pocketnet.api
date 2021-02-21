@@ -106,5 +106,26 @@ namespace api.Controllers
             return Ok(items);
         }
         
+        [HttpGet("GetRawTransactionWithMessage")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<PostData>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<PostData>>> GetRawTransactionWithMessage(
+            [DefaultValue(""), MaxLength(34)] string addressFrom,
+            [DefaultValue(""), MaxLength(34)] string addressTo,
+            [DefaultValue("")] string txId, //check name
+            [DefaultValue(50)] int resultCount,
+            [DefaultValue("")] string lang
+            )
+        {
+            var items = await _repository.GetRawTransactionWithMessageByIdAsync(txIds, address);
+
+            if (items == null)
+            {
+                _logger.LogError($"GetRawTransactionWithMessageById No records: {txIds}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
     }
 }
