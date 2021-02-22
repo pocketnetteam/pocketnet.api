@@ -89,6 +89,21 @@ namespace api.Controllers
 
             return Ok(items);
         }
+        [HttpGet("GetTags")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<Tag>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<Tag>>> GetTagsAsync([DefaultValue(""), MaxLength(34)] string address, [DefaultValue(50)] int count, int block, [DefaultValue("en")] string lang)
+        {
+            var items = await _repository.GetTagsAsync(address,count, block, lang);
+
+            if (items == null)
+            {
+                _logger.LogError($"GetTags No records: {address} {count} {block} {lang}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
 
         [HttpGet("GetRawTransactionWithMessageById")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]

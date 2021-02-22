@@ -320,6 +320,46 @@ limit $resultCount";
         }
 
         [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<Tag>> GetTagsAsync(string address, int count, int block, string lang)
+        {
+            string addressblock  = "";
+            if (address!="")   addressblock = "address = $address and";
+
+            var commandText = $@"select p.tags from Posts p where lang=$lang and block>=$block and {addressblock} tags!='[]';";
+
+            // Manual tags Deserialization works 7-10 % faster than DB parsing with json_each
+            // var commandText = $@"SELECT lower(t.value)tag, count(*) count FROM Posts p, json_each(p.tags)t where lang=$lang and block>=$block and {addressblock} tags!='[]' group by lower(t.value) order by count(*) desc;";
+
+            var command = new SqliteCommand(commandText, _context.Connection);
+
+            if (address != "") command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$lang", lang).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$block", block).SqliteType = SqliteType.Integer;
+
+            var counter = new Dictionary <string, int>();
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                var tgs = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("tags"));
+                foreach (var t in tgs.Select (t => t.ToLower ()))
+                {
+                    counter.TryGetValue(t, out int value);
+                    counter[t] = value+1;
+                }
+            }
+
+            var res = counter.OrderByDescending(t => t.Value).Take(count).Select(t => new Tag()
+            {
+                tag = t.Key,
+                count = t.Value
+            }).ToList();
+
+            return res;
+        }
+
+        [CacheableMethod(60)]
         public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(string txIds, string address)
         {
             var res = new List<PostData>();
