@@ -12,6 +12,7 @@ namespace api.Repositories.Interfaces
         Task<IEnumerable<UserProfile>> GetUserProfileAsync(string addresses, bool shortForm = true, int option = 0);
         Task<IEnumerable<Tag>> GetTagsAsync(string address, int count, int block, string lang);
         Task<IEnumerable<UserAddress>> GetUserAddressAsync(string name, int count);
+        Task<IEnumerable<Content>> GetContentsAsync(string address, string lang, int count);
         Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(string txIds, string address);
     }
 }

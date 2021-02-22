@@ -120,6 +120,21 @@ namespace api.Controllers
 
             return Ok(items);
         }
+        [HttpGet("GetContents")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<Content>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<Content>>> GetContentsAsync([Required, MaxLength(34)] string address, [DefaultValue("en")] string lang, [DefaultValue(200)] int count)
+        {
+            var items = await _repository.GetContentsAsync(address, lang, count);
+
+            if (items == null)
+            {
+                _logger.LogError($"GetContents No records: {address} {count} {lang}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
 
         [HttpGet("GetRawTransactionWithMessageById")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]

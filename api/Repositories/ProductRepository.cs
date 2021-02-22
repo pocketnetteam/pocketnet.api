@@ -388,6 +388,40 @@ limit $resultCount";
         }
 
         [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<Content>> GetContentsAsync(string address, string lang, int count)
+        {
+            var commandText = $@"select case when caption ='' then message else caption end content, txid,time,reputation,settings,scoreCnt,scoreSum  from Posts p where lang=$lang and address=$address order by time desc limit $count;";
+
+            var command = new SqliteCommand(commandText, _context.Connection);
+
+            command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$lang", lang).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$count", count).SqliteType = SqliteType.Integer;
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            var res = new List<Content>();
+
+            while (await reader.ReadAsync())
+            {
+                Content c = new Content()
+                {
+                    content = reader.SafeGetString("content"),
+                    txid = reader.SafeGetString("txid"),
+                    time = reader.SafeGetString("time"),
+                    reputation = reader.SafeGetString("reputation"),
+                    settings = reader.SafeGetString("settings"),
+                    scoreSum = reader.SafeGetString("scoreSum"),
+                    scoreCnt = reader.SafeGetString("scoreCnt")
+                };
+
+                res.Add(c);
+            }
+
+            return res;
+        }
+
+        [CacheableMethod(60)]
         public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(string txIds, string address)
         {
             var res = new List<PostData>();
