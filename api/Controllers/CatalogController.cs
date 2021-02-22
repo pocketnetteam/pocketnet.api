@@ -105,6 +105,22 @@ namespace api.Controllers
             return Ok(items);
         }
 
+        [HttpGet("GetUserAddress")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<UserAddress>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<UserAddress>>> GetUserAddressAsync([DefaultValue("")] string name, [DefaultValue(7)] int count)
+        {
+            var items = await _repository.GetUserAddressAsync(name, count);
+
+            if (items == null)
+            {
+                _logger.LogError($"GetUserAddress No records: {name} {count}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
+
         [HttpGet("GetRawTransactionWithMessageById")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<PostData>), (int)HttpStatusCode.OK)]

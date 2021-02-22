@@ -360,6 +360,34 @@ limit $resultCount";
         }
 
         [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<UserAddress>> GetUserAddressAsync(string name, int count)
+        {
+            var commandText = $@"select address from UsersView uw where name=$name COLLATE NOCASE limit $count;";
+
+            var command = new SqliteCommand(commandText, _context.Connection);
+
+            command.Parameters.AddWithValue("$name", name).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$count", count).SqliteType = SqliteType.Integer;
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            var res = new List<UserAddress>();
+
+            while (await reader.ReadAsync())
+            {
+                UserAddress ua = new UserAddress()
+                {
+                    name = name,
+                    address = reader.SafeGetString("address")
+                };
+
+                res.Add(ua);
+            }
+
+            return res;
+        }
+
+        [CacheableMethod(60)]
         public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(string txIds, string address)
         {
             var res = new List<PostData>();
