@@ -62,7 +62,7 @@ namespace api.Controllers
         [HttpGet("Getpagescores")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Score>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync([DefaultValue("")]string tx_ids, [DefaultValue(""), MaxLength(34)] string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync([DefaultValue("")] string tx_ids, [DefaultValue(""), MaxLength(34)] string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
         {
             var items = await _repository.GetPageScoresAsync(tx_ids, address, comment_ids, resultCount);
 
@@ -77,9 +77,9 @@ namespace api.Controllers
         [HttpGet("Getuserprofile")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<UserProfile>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<UserProfile>>> GetUserProfileAsync([DefaultValue("")] string addresses, [DefaultValue(true)] bool shortForm, [DefaultValue(0)] int option)
+        public async Task<ActionResult<IEnumerable<UserProfile>>> GetUserProfileAsync([Required, MaxLength(34)] string addresses, [DefaultValue(true)] bool shortForm, [DefaultValue(0)] int option)
         {
-            var items = await _repository.GetUserProfileAsync(addresses,shortForm, option);
+            var items = await _repository.GetUserProfileAsync(addresses, shortForm, option);
 
             if (items == null)
             {
@@ -94,7 +94,7 @@ namespace api.Controllers
         [ProducesResponseType(typeof(IEnumerable<Tag>), (int)HttpStatusCode.OK)]
         public async Task<ActionResult<IEnumerable<Tag>>> GetTagsAsync([DefaultValue(""), MaxLength(34)] string address, [DefaultValue(50)] int count, int block, [DefaultValue("en")] string lang)
         {
-            var items = await _repository.GetTagsAsync(address,count, block, lang);
+            var items = await _repository.GetTagsAsync(address, count, block, lang);
 
             if (items == null)
             {
@@ -151,6 +151,14 @@ namespace api.Controllers
 
             return Ok(items);
         }
-        
+        [HttpGet("Search")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(Search), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<Search>> SearchAsync([Required] string search_string, [Required] string type, [DefaultValue("")] string address, [DefaultValue(0)] int blockNumber, [DefaultValue(0)] int resultStart, [DefaultValue(10)] int resultCount)
+        {
+            var res = await _repository.SearchAsync(search_string, type, address, blockNumber, resultStart, resultCount);
+
+            return Ok(res);
+        }
     }
 }
