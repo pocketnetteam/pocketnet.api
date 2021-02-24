@@ -422,7 +422,7 @@ limit $resultCount";
             return res;
         }
 
-        //[CacheableMethod(60)]
+        [CacheableMethod(60)]
         public virtual async Task<Search> SearchAsync(string search_string, string type, string address, int blockNumber, int resultStart, int resultCount)
         {
             bool fs = (type == "fs");
