@@ -13,6 +13,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using System.Collections.Generic;
+using api.Helpers;
 
 namespace Catalog.API
 {
@@ -28,7 +29,7 @@ namespace Catalog.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            Cacheable.AddCustomConverter<IReadOnlyCollection<string>>(n => string.Join(",", n));
+            Cacheable.AddCustomConverter<List<string>>(CacheConverterHelper.ConvertList);
 
             services.AddControllers();
 

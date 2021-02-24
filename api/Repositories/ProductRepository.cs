@@ -29,7 +29,7 @@ namespace api.Repositories
         }
 
         [CacheableMethod(60)]
-        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(IReadOnlyCollection<string> addresses, bool shortForm = true, int option = 0)
+        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(List<string> addresses, bool shortForm = true, int option = 0)
         {
 
             // In full form add other fields
@@ -421,6 +421,7 @@ limit $resultCount";
 
             return res;
         }
+
         //[CacheableMethod(60)]
         public virtual async Task<Search> SearchAsync(string search_string, string type, string address, int blockNumber, int resultStart, int resultCount)
         {
@@ -560,7 +561,7 @@ limit $resultCount";
             return await GetRawTransactionWithMessageByIdAsync(txIdsLst, address);
         }
         [CacheableMethod(60)]
-        public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(IReadOnlyCollection<string> txIdsLst, string address)
+        public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(List<string> txIdsLst, string address)
         {
             var res = new List<PostData>();
 
