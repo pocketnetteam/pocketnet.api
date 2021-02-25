@@ -62,7 +62,7 @@ namespace api.Controllers
         [HttpGet("Getpagescores")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<Score>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync([DefaultValue("")]string tx_ids, [DefaultValue(""), MaxLength(34)] string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
+        public async Task<ActionResult<IEnumerable<Score>>> GetPageScoresAsync([DefaultValue("")] string tx_ids, [DefaultValue(""), MaxLength(34)] string address, [DefaultValue("")] string comment_ids, [DefaultValue(100)] int resultCount)
         {
             var items = await _repository.GetPageScoresAsync(tx_ids, address, comment_ids, resultCount);
 
@@ -77,13 +77,59 @@ namespace api.Controllers
         [HttpGet("Getuserprofile")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<UserProfile>), (int)HttpStatusCode.OK)]
-        public async Task<ActionResult<IEnumerable<UserProfile>>> GetUserProfileAsync([DefaultValue("")] string addresses, [DefaultValue(true)] bool shortForm, [DefaultValue(0)] int option)
+        public async Task<ActionResult<IEnumerable<UserProfile>>> GetUserProfileAsync([Required, MaxLength(34)] string addresses, [DefaultValue(true)] bool shortForm, [DefaultValue(0)] int option)
         {
-            var items = await _repository.GetUserProfileAsync(addresses,shortForm, option);
+            var items = await _repository.GetUserProfileAsync(addresses, shortForm, option);
 
             if (items == null)
             {
                 _logger.LogError($"GetUserProfileAsync No records: {addresses}, {shortForm}, {option}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
+        [HttpGet("GetTags")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<Tag>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<Tag>>> GetTagsAsync([DefaultValue(""), MaxLength(34)] string address, [DefaultValue(50)] int count, int block, [DefaultValue("en")] string lang)
+        {
+            var items = await _repository.GetTagsAsync(address, count, block, lang);
+
+            if (items == null)
+            {
+                _logger.LogError($"GetTags No records: {address} {count} {block} {lang}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
+
+        [HttpGet("GetUserAddress")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<UserAddress>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<UserAddress>>> GetUserAddressAsync([DefaultValue("")] string name, [DefaultValue(7)] int count)
+        {
+            var items = await _repository.GetUserAddressAsync(name, count);
+
+            if (items == null)
+            {
+                _logger.LogError($"GetUserAddress No records: {name} {count}");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
+        [HttpGet("GetContents")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<Content>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<Content>>> GetContentsAsync([Required, MaxLength(34)] string address, [DefaultValue("en")] string lang, [DefaultValue(200)] int count)
+        {
+            var items = await _repository.GetContentsAsync(address, lang, count);
+
+            if (items == null)
+            {
+                _logger.LogError($"GetContents No records: {address} {count} {lang}");
                 return NotFound();
             }
 
@@ -126,6 +172,16 @@ namespace api.Controllers
             }
 
             return Ok(items);
+        }
+
+        [HttpGet("Search")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(Search), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<Search>> SearchAsync([Required] string search_string, [Required] string type, [DefaultValue("")] string address, [DefaultValue(0)] int blockNumber, [DefaultValue(0)] int resultStart, [DefaultValue(10)] int resultCount)
+        {
+            var res = await _repository.SearchAsync(search_string, type, address, blockNumber, resultStart, resultCount);
+
+            return Ok(res);
         }
     }
 }

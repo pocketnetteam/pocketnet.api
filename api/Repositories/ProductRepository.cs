@@ -8,6 +8,7 @@ using api.Services;
 using DynaCache.Attributes;
 using Microsoft.Data.Sqlite;
 using System.Linq;
+using System.Web;
 
 namespace api.Repositories
 {
@@ -28,7 +29,7 @@ namespace api.Repositories
         }
 
         [CacheableMethod(60)]
-        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(IReadOnlyCollection<string> addresses, bool shortForm = true, int option = 0)
+        public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(List<string> addresses, bool shortForm = true, int option = 0)
         {
 
             // In full form add other fields
@@ -38,7 +39,7 @@ namespace api.Repositories
 
             // TODO typo in subscribes - "adddress"
 
-            var longForm = shortForm  ? "" : @"
+            var longForm = shortForm ? "" : @"
      ,regdate
      ,lang
      ,url
@@ -78,7 +79,7 @@ from UsersView uw where address in ('{string.Join("','", addresses)}')";
             var res = new List<UserProfile>();
 
             var command = new SqliteCommand(commandText, _context.Connection);
-            
+
             await using var reader = await command.ExecuteReaderAsync();
 
             while (await reader.ReadAsync())
@@ -151,7 +152,7 @@ where
       c.last=1
 order by c.time asc
 limit $resultCount";
-            
+
             var command = new SqliteCommand(commandText, _context.Connection);
 
             command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
@@ -320,11 +321,249 @@ limit $resultCount";
         }
 
         [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<Tag>> GetTagsAsync(string address, int count, int block, string lang)
+        {
+            string addressblock = "";
+            if (address != "") addressblock = "address = $address and";
+
+            var commandText = $@"select p.tags from Posts p where lang=$lang and block>=$block and {addressblock} tags!='[]';";
+
+            // Manual tags Deserialization works 7-10 % faster than DB parsing with json_each
+            // var commandText = $@"SELECT lower(t.value)tag, count(*) count FROM Posts p, json_each(p.tags)t where lang=$lang and block>=$block and {addressblock} tags!='[]' group by lower(t.value) order by count(*) desc;";
+
+            var command = new SqliteCommand(commandText, _context.Connection);
+
+            if (address != "") command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$lang", lang).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$block", block).SqliteType = SqliteType.Integer;
+
+            var counter = new Dictionary<string, int>();
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                var tgs = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("tags"));
+                foreach (var t in tgs.Select(t => t.ToLower()))
+                {
+                    counter.TryGetValue(t, out int value);
+                    counter[t] = value + 1;
+                }
+            }
+
+            var res = counter.OrderByDescending(t => t.Value).Take(count).Select(t => new Tag()
+            {
+                tag = t.Key,
+                count = t.Value
+            }).ToList();
+
+            return res;
+        }
+
+        [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<UserAddress>> GetUserAddressAsync(string name, int count)
+        {
+            var commandText = $@"select address from UsersView uw where name=$name COLLATE NOCASE limit $count;";
+
+            var command = new SqliteCommand(commandText, _context.Connection);
+
+            command.Parameters.AddWithValue("$name", name).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$count", count).SqliteType = SqliteType.Integer;
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            var res = new List<UserAddress>();
+
+            while (await reader.ReadAsync())
+            {
+                UserAddress ua = new UserAddress()
+                {
+                    name = name,
+                    address = reader.SafeGetString("address")
+                };
+
+                res.Add(ua);
+            }
+
+            return res;
+        }
+
+        [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<Content>> GetContentsAsync(string address, string lang, int count)
+        {
+            var commandText = $@"select case when caption ='' then message else caption end content, txid,time,reputation,settings,scoreCnt,scoreSum  from Posts p where lang=$lang and address=$address order by time desc limit $count;";
+
+            var command = new SqliteCommand(commandText, _context.Connection);
+
+            command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$lang", lang).SqliteType = SqliteType.Text;
+            command.Parameters.AddWithValue("$count", count).SqliteType = SqliteType.Integer;
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            var res = new List<Content>();
+
+            while (await reader.ReadAsync())
+            {
+                Content c = new Content()
+                {
+                    content = HttpUtility.UrlDecode(reader.SafeGetString("content")),
+                    txid = reader.SafeGetString("txid"),
+                    time = reader.SafeGetString("time"),
+                    reputation = reader.SafeGetString("reputation"),
+                    settings = reader.SafeGetString("settings"),
+                    scoreSum = reader.SafeGetString("scoreSum"),
+                    scoreCnt = reader.SafeGetString("scoreCnt")
+                };
+
+                res.Add(c);
+            }
+
+            return res;
+        }
+
+        [CacheableMethod(60)]
+        public virtual async Task<Search> SearchAsync(string search_string, string type, string address, int blockNumber, int resultStart, int resultCount)
+        {
+            bool fs = (type == "fs");
+            bool all = (type == "all");
+            bool posts = (type == "posts");
+            bool users = (type == "users");
+            bool tags = (type == "tags");
+
+            if (!users && !all && !posts && !tags)
+            {
+                fs = true;
+            }
+
+            Search res = new Search();
+            int fsresultCount = 10;
+            Dictionary<string, int> freq = new Dictionary<string, int>();
+            SqliteCommand command = null;
+
+            if (fs || all || posts || tags)
+            {
+                List<string> txids = new();
+                string addressblock = "";
+                string blockNumberblock = "";
+                string searchBlock = "";
+
+                if (address != "") addressblock = " and address = $address";
+                if (blockNumber != 0) blockNumberblock = $" and block >= {blockNumber}";
+                if (!search_string.StartsWith('#')) searchBlock = $" and caption_ || ' ' || message_ like '%{search_string.Replace("'", "''")}%' COLLATE NOCASE";
+                if (search_string.StartsWith('#')) searchBlock = $" and tags like '%{search_string.Substring(1).Replace("'", "''")}%' COLLATE NOCASE";
+
+
+                // Count Posts
+                var cntCommandText = $@"select count(*) cnt from Posts p where 1=1 {addressblock} {blockNumberblock} {searchBlock} ;";
+
+                var commandCnt = new SqliteCommand(cntCommandText, _context.Connection);
+                if (address != "") commandCnt.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+
+                int postCnt = Convert.ToInt32(await commandCnt.ExecuteScalarAsync());
+                // Count Posts
+
+
+                string fields = "txid";
+                if (fs) fields = "caption_ || ' ' || message_ as content";
+
+
+                var commandText = $@"select {fields} from Posts p where 1=1 {addressblock} {blockNumberblock} {searchBlock} order by time desc limit $resultCount offset $resultStart;";
+                command = new SqliteCommand(commandText, _context.Connection);
+
+
+                if (address != "") command.Parameters.AddWithValue("$address", address).SqliteType = SqliteType.Text;
+                command.Parameters.AddWithValue("$resultStart", resultStart).SqliteType = SqliteType.Integer;
+                command.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = SqliteType.Integer;
+
+                await using var reader = await command.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    if (fs)
+                    {
+                        string content = reader.SafeGetString("content");
+                        content.getFastSearchString(search_string, freq);
+                    }
+                    if (posts || all || tags)
+                    {
+                        txids.Add(reader.SafeGetString("txid"));
+                    }
+
+
+                }
+
+                if (posts || all || tags)
+                {
+                    res.posts = new PostsWithCount
+                    {
+                        count = postCnt,
+                        data = (await GetRawTransactionWithMessageByIdAsync(txids, "")).ToArray()
+                    };
+                }
+            }
+
+            if (all || users)
+            {
+                List<string> addresses = new();
+                string blockNumberblock = "";
+
+                if (blockNumber != 0) blockNumberblock = $" and block >= {blockNumber}";
+                string searchBlock = $" name like '%{search_string.Replace("'", "''")}%' COLLATE NOCASE";
+
+
+                // Count Users
+                var cntCommandText = $@"select count(*) cnt from UsersView uw where {searchBlock} {blockNumberblock}  ;";
+
+                var commandCnt = new SqliteCommand(cntCommandText, _context.Connection);
+
+                int usersCnt = Convert.ToInt32(await commandCnt.ExecuteScalarAsync());
+                // Count Users
+
+
+                var commandText = $@"select address from UsersView where {searchBlock} {blockNumberblock}  order by time asc limit $resultCount offset $resultStart;";
+                command = new SqliteCommand(commandText, _context.Connection);
+
+                command.Parameters.AddWithValue("$resultStart", resultStart).SqliteType = SqliteType.Integer;
+                command.Parameters.AddWithValue("$resultCount", resultCount).SqliteType = SqliteType.Integer;
+
+                await using var reader = await command.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    addresses.Add(reader.SafeGetString("address"));
+                }
+
+                res.users = new UsersWithCount
+                {
+                    count = usersCnt,
+                    data = (await GetUserProfileAsync(addresses, true, 1)).ToArray()
+                };
+
+                // items left to fill with fs results
+                fsresultCount = addresses.Count() < fsresultCount ? fsresultCount - addresses.Count() : 0;
+            }
+
+
+            if (fs && fsresultCount > 0)
+            {
+                res.fastsearch = freq.OrderByDescending(x => x.Value).Select(x => x.Key).Take(fsresultCount).ToArray();
+            }
+
+
+            return res;
+        }
+
         public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(string txIds, string address)
         {
-            var res = new List<PostData>();
-
             var txIdsLst = txIds.FromJArray();
+
+            return await GetRawTransactionWithMessageByIdAsync(txIdsLst, address);
+        }
+        [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(List<string> txIdsLst, string address)
+        {
+            var res = new List<PostData>();
 
             var commandText = $@"select
         txid
@@ -393,16 +632,16 @@ limit $resultCount";
                     scoreSum = reader.SafeGetString("scoreSum"),
                     scoreCnt = reader.SafeGetString("scoreCnt"),
                     myVal = reader.SafeGetString("myVal"),
-                    comments=reader.SafeGetInt32("comments"), 
+                    comments = reader.SafeGetInt32("comments"),
                     reposted = reader.SafeGetInt32("reposted")
                 };
 
                 pd.lastComment = Newtonsoft.Json.JsonConvert.DeserializeObject<Comment>(reader.SafeGetString("lastComment"));
-                pd.s= Newtonsoft.Json.JsonConvert.DeserializeObject<DTOs.Settings>(reader.SafeGetString("settings"));
-                pd.t=Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("tags"));
-                pd.i=Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("images"));
+                pd.s = Newtonsoft.Json.JsonConvert.DeserializeObject<DTOs.Settings>(reader.SafeGetString("settings"));
+                pd.t = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("tags"));
+                pd.i = Newtonsoft.Json.JsonConvert.DeserializeObject<string[]>(reader.SafeGetString("images"));
 
-                pd.userprofile = (await GetUserProfileAsync(new List<string> { pd.address } )).FirstOrDefault();
+                pd.userprofile = (await GetUserProfileAsync(new List<string> { pd.address })).FirstOrDefault();
 
 
                 res.Add(pd);
