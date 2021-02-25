@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Net;
@@ -151,7 +152,7 @@ namespace api.Controllers
 
             return Ok(items);
         }
-        
+
         [HttpGet("GetRawTransactionWithMessage")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(IEnumerable<PostData>), (int)HttpStatusCode.OK)]
@@ -163,15 +164,16 @@ namespace api.Controllers
             [DefaultValue("")] string lang
             )
         {
-            var items = await _repository.GetRawTransactionWithMessageByIdAsync(txIds, address);
+            // var items = await _repository.GetRawTransactionWithMessageByIdAsync(txIds, address);
+            //
+            // if (items == null)
+            // {
+            //     _logger.LogError($"GetRawTransactionWithMessageById No records: {txIds}");
+            //     return NotFound();
+            // }
 
-            if (items == null)
-            {
-                _logger.LogError($"GetRawTransactionWithMessageById No records: {txIds}");
-                return NotFound();
-            }
-
-            return Ok(items);
+            //return Ok(items);
+            throw new NotImplementedException();
         }
 
         [HttpGet("Search")]

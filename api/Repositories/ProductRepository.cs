@@ -16,9 +16,14 @@ namespace api.Repositories
     {
         private readonly CatalogContext _context;
 
-        public ProductRepository(CatalogContext catalogContext)
+        private readonly SubscribesViewRepository _subscribesViewRepository;
+
+        public ProductRepository(
+            CatalogContext catalogContext,
+            SubscribesViewRepository subscribesViewRepository)
         {
             _context = catalogContext ?? throw new ArgumentNullException(nameof(catalogContext));
+            _subscribesViewRepository = subscribesViewRepository;
         }
 
         public virtual async Task<IEnumerable<UserProfile>> GetUserProfileAsync(string addresses, bool shortForm = true, int option = 0)
@@ -560,6 +565,7 @@ limit $resultCount";
 
             return await GetRawTransactionWithMessageByIdAsync(txIdsLst, address);
         }
+
         [CacheableMethod(60)]
         public virtual async Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(List<string> txIdsLst, string address)
         {
@@ -649,6 +655,46 @@ limit $resultCount";
 
 
             return res;
+        }
+
+        public virtual async Task GetRawTransactionWithMessageAsync(
+            string addressFrom,
+            string addressTo,
+            string txId,
+            int resultCount,
+            string lang)
+        {
+            if (!string.IsNullOrEmpty(addressTo))
+            {
+                List<string> addresses;
+
+                if (addressTo == "1")
+                {
+                    if (addressFrom.Length < 34)
+                    {
+                        throw new ArgumentException("Invalid address in HEX transaction");
+                    }
+
+                    addresses = await _subscribesViewRepository.GetAddressesToByAddressAsync(addressFrom);
+                }
+                else
+                {
+                    addresses = new List<string>()
+                    {
+                        addressTo
+                    };
+                }
+                
+                // err = g_pocketdb->DB()->Select(
+                //     reindexer::Query("Posts" /*, 0, resultCount*/).Where("lang", (lang == "" ? CondGe : CondEq), lang).Where("address", CondSet, addrs).Not().Where("address", CondSet, addrsblock).Where("time", ((resultCount > 0 && resultStart > 0) ? CondLt : CondGt), resultStart).Where("time", CondLe, GetAdjustedTime()).Sort("time", (resultCount > 0 ? true : false)),
+                //     queryRes);
+            }
+            else
+            {
+                // err = g_pocketdb->DB()->Select(
+                //     reindexer::Query("Posts" /*, 0, resultCount*/).Where("lang", (lang == "" ? CondGe : CondEq), lang).Where("txidRepost", CondEq, "").Not().Where("address", CondSet, addrsblock).Where("time", ((resultCount > 0 && resultStart > 0) ? CondLt : CondGt), resultStart).Where("time", CondLe, GetAdjustedTime()).Sort("time", (resultCount > 0 ? true : false)),
+                //     queryRes);
+            }
         }
     }
 }
