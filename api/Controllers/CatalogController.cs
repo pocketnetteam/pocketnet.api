@@ -151,6 +151,21 @@ namespace api.Controllers
 
             return Ok(items);
         }
+        [HttpGet("GetHotPosts")]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [ProducesResponseType(typeof(IEnumerable<PostData>), (int)HttpStatusCode.OK)]
+        public async Task<ActionResult<IEnumerable<PostData>>> GetHotPostsAsync([DefaultValue(20)] int count, [DefaultValue(24 * 3 * 60 * 60)] int depth, [DefaultValue("")] string address, [DefaultValue("")] string lang)
+        {
+            var items = await _repository.GetHotPostsAsync(count, depth, address, lang);
+
+            if (items == null)
+            {
+                _logger.LogError("GetHotPostsAsync No records:");
+                return NotFound();
+            }
+
+            return Ok(items);
+        }
         [HttpGet("Search")]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         [ProducesResponseType(typeof(Search), (int)HttpStatusCode.OK)]
@@ -160,5 +175,7 @@ namespace api.Controllers
 
             return Ok(res);
         }
+
+
     }
 }

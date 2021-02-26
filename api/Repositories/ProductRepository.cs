@@ -650,5 +650,43 @@ limit $resultCount";
 
             return res;
         }
+        [CacheableMethod(60)]
+        public virtual async Task<IEnumerable<PostData>> GetHotPostsAsync(int count, int depth, string address, string lang)
+        {
+            List<string> txids = new();
+
+            var foo = DateTime.UtcNow;
+            var unixTime = ((DateTimeOffset)foo).ToUnixTimeSeconds() - depth;
+
+            var wherelang = (lang == "") ? "" : $@"and lang = '{lang.Replace(",", "")}'";
+            // Exclude posts from blocked authors
+            var whereblocked = (address == "") ? "" : $@"and not exists(select* from BlockingView bw where p.address = bw.address_to and bw.address = '{address.Replace(",", "")}')";
+            // TODO Do not show posts from users with reputation < Limit::bad_reputation  NOW SET TO 3
+            var wherereputation = (address == "") ? "" : $@"and not exists(select * from UsersView uw where reputation <= 3 and p.address = uw.address)";
+
+            var commandText = $@"select txid from Posts p where 1 = 1
+             {wherelang}
+             {whereblocked}
+             {wherereputation}
+             and time >= $unixTime
+             and reputation> 0
+             order by reputation desc, scoreSum desc
+             limit $count;";
+
+            var command = new SqliteCommand(commandText, _context.Connection);
+
+            command.Parameters.AddWithValue("$unixTime", unixTime).SqliteType = SqliteType.Integer;
+            command.Parameters.AddWithValue("$count", count).SqliteType = SqliteType.Integer;
+
+            await using var reader = await command.ExecuteReaderAsync();
+
+            while (await reader.ReadAsync())
+            {
+                txids.Add(reader.SafeGetString("txid"));
+            }
+
+            return (await GetRawTransactionWithMessageByIdAsync(txids, address)).ToArray();
+        }
+
     }
 }

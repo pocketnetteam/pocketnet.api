@@ -15,5 +15,6 @@ namespace api.Repositories.Interfaces
         Task<IEnumerable<Content>> GetContentsAsync(string address, string lang, int count);
         Task<IEnumerable<PostData>> GetRawTransactionWithMessageByIdAsync(string txIds, string address);
         Task<Search> SearchAsync(string search_string, string type, string address, int blockNumber, int resultStart, int resultCount);
+        Task<IEnumerable<PostData>> GetHotPostsAsync(int count, int depth, string address, string lang);
     }
 }
